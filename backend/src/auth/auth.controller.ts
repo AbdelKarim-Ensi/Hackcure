@@ -1,83 +1,57 @@
-// AJOUT : T3 - squelette du contrôleur auth (données mockées, services réels en T2)
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Public } from '../common/decorators/public.decorator';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
-  ApiBadRequestResponse,
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-  ApiUnauthorizedResponse,
-} from '@nestjs/swagger';
-import { UserRole } from '../common/enums';
-import { ErrorResponseDto } from '../common/dto/error-response.dto';
-import { MOCK_IDS } from '../contract/mocks';
-import {
-  LoginDto,
-  OtpSendDto,
-  OtpSendResponseDto,
-  OtpVerifyDto,
-  RefreshDto,
-  RegisterDto,
-  RegisterResponseDto,
-  TokensDto,
-} from './dto/auth.dto';
-
-const mockTokens = (phone: string, role: UserRole = UserRole.DONNEUR): TokensDto => ({
-  accessToken: 'mock.access.token',
-  refreshToken: 'mock.refresh.token',
-  expiresIn: 900,
-  user: { id: MOCK_IDS.donorUser, role, phone, fullName: 'Amine Ben Salah' },
-});
+  LoginDto, OtpSendDto, OtpSendResponseDto, OtpVerifyDto, RefreshDto,
+  RegisterDto, RegisterResponseDto, TokensDto,
+} from './auth.dto';
+import { AuthService } from './auth.service';
 
 @ApiTags('auth')
+@Public()
 @Controller('auth')
 export class AuthController {
+  constructor(private readonly auth: AuthService) {}
+
   @Post('register')
   @ApiOperation({
     summary: 'Créer un compte',
-    description: 'Crée le compte (téléphone + mot de passe) et envoie un code OTP. Le compte reste non vérifié jusqu\'à /auth/otp/verify.',
+    description: "Crée le compte (téléphone + mot de passe) et envoie un code OTP. Le compte reste non vérifié jusqu'à /auth/otp/verify.",
   })
   @ApiCreatedResponse({ type: RegisterResponseDto })
-  @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Données invalides ou téléphone déjà utilisé' })
-  register(@Body() _dto: RegisterDto): RegisterResponseDto {
-    return { userId: MOCK_IDS.donorUser, otpSent: true, devOtp: '123456' };
+  register(@Body() dto: RegisterDto) {
+    return this.auth.register(dto);
   }
 
   @Post('otp/send')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Renvoyer un code OTP', description: 'Limité en débit (quota strict, T7.3).' })
   @ApiOkResponse({ type: OtpSendResponseDto })
-  sendOtp(@Body() _dto: OtpSendDto): OtpSendResponseDto {
-    return { sent: true, expiresInSeconds: 300, devOtp: '123456' };
+  sendOtp(@Body() dto: OtpSendDto) {
+    return this.auth.sendOtp(dto.phone);
   }
 
   @Post('otp/verify')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Vérifier le code OTP',
-    description: 'Marque le téléphone comme vérifié et renvoie les tokens JWT.',
-  })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Vérifier le code OTP', description: 'Marque le téléphone comme vérifié et renvoie les tokens JWT.' })
   @ApiOkResponse({ type: TokensDto })
-  @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Code incorrect, expiré ou trop d\'essais' })
-  verifyOtp(@Body() dto: OtpVerifyDto): TokensDto {
-    return mockTokens(dto.phone);
+  verifyOtp(@Body() dto: OtpVerifyDto) {
+    return this.auth.verifyOtp(dto.phone, dto.code);
   }
 
   @Post('login')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Connexion par téléphone et mot de passe' })
   @ApiOkResponse({ type: TokensDto })
-  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'Identifiants invalides' })
-  login(@Body() dto: LoginDto): TokensDto {
-    return mockTokens(dto.phone);
+  login(@Body() dto: LoginDto) {
+    return this.auth.login(dto);
   }
 
   @Post('refresh')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Renouveler les tokens' })
   @ApiOkResponse({ type: TokensDto })
-  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'Refresh token invalide ou expiré' })
-  refresh(@Body() _dto: RefreshDto): TokensDto {
-    return mockTokens('+21612345678');
+  refresh(@Body() dto: RefreshDto) {
+    return this.auth.refresh(dto.refreshToken);
   }
 }
