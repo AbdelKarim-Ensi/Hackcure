@@ -1,6 +1,4 @@
-import {
-  BadRequestException, Body, Controller, HttpCode, HttpStatus, NotImplementedException, Post,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   LoginDto, OtpSendDto, OtpSendResponseDto, OtpVerifyDto, RefreshDto,
@@ -23,24 +21,20 @@ export class AuthController {
     return this.auth.register(dto);
   }
 
-  // TEMPORAIRE (remplacé en T2.2) : mock tant que l'OTP Redis n'existe pas.
   @Post('otp/send')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Renvoyer un code OTP', description: 'Limité en débit (quota strict, T7.3).' })
   @ApiOkResponse({ type: OtpSendResponseDto })
-  sendOtp(@Body() _dto: OtpSendDto): OtpSendResponseDto {
-    return { sent: true, expiresInSeconds: 300, ...(this.auth.devMode ? { devOtp: '123456' } : {}) };
+  sendOtp(@Body() dto: OtpSendDto) {
+    return this.auth.sendOtp(dto.phone);
   }
 
-  // TEMPORAIRE (remplacé en T2.2) : en mode démo seulement, le code 123456 est accepté.
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Vérifier le code OTP', description: 'Marque le téléphone comme vérifié et renvoie les tokens JWT.' })
   @ApiOkResponse({ type: TokensDto })
   verifyOtp(@Body() dto: OtpVerifyDto) {
-    if (!this.auth.devMode) throw new NotImplementedException('OTP réel : voir T2.2');
-    if (dto.code !== '123456') throw new BadRequestException("Code incorrect, expiré ou trop d'essais");
-    return this.auth.markVerifiedAndIssue(dto.phone);
+    return this.auth.verifyOtp(dto.phone, dto.code);
   }
 
   @Post('login')

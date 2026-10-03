@@ -9,8 +9,9 @@ import { Repository } from 'typeorm';
 import { Institution, User } from '../database/entities';
 import { UserRole, UserStatus, ValidationStatus } from '../database/enums';
 import {
-  AuthUserDto, LoginDto, RegisterDto, RegisterResponseDto, TokensDto,
+  AuthUserDto, LoginDto, OtpSendResponseDto, RegisterDto, RegisterResponseDto, TokensDto,
 } from './auth.dto';
+import { OTP_TTL_SECONDS, OtpService } from './otp.service';
 import { ACCESS_TTL_SECONDS, JwtPayload, REFRESH_TTL_SECONDS } from './auth.types';
 
 @Injectable()
@@ -23,6 +24,7 @@ export class AuthService {
     @InjectRepository(Institution) private readonly institutions: Repository<Institution>,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly otp: OtpService,
   ) {}
 
   get devMode(): boolean {
@@ -34,8 +36,9 @@ export class AuthService {
       throw new BadRequestException('Téléphone déjà utilisé');
     }
     const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
+    let user: User;
     try {
-      const user = await this.users.save(
+      user = await this.users.save(
         this.users.create({
           phone: dto.phone,
           passwordHash,
@@ -44,12 +47,25 @@ export class AuthService {
           phoneVerified: false,
         }),
       );
-      // T2.2 : l'envoi du code OTP sera branché ici.
-      return { userId: user.id, otpSent: false };
     } catch (e: any) {
       if (e?.code === '23505') throw new BadRequestException('Téléphone déjà utilisé');
       throw e;
     }
+    const code = await this.otp.issue(dto.phone);
+    return { userId: user.id, otpSent: true, ...(this.devMode ? { devOtp: code } : {}) };
+  }
+
+  /** Réponse identique que le téléphone existe ou non (pas d'énumération de comptes). */
+  async sendOtp(phone: string): Promise<OtpSendResponseDto> {
+    const user = await this.users.findOne({ where: { phone } });
+    if (!user) return { sent: true, expiresInSeconds: OTP_TTL_SECONDS };
+    const code = await this.otp.issue(phone);
+    return { sent: true, expiresInSeconds: OTP_TTL_SECONDS, ...(this.devMode ? { devOtp: code } : {}) };
+  }
+
+  async verifyOtp(phone: string, code: string): Promise<TokensDto> {
+    await this.otp.verify(phone, code);
+    return this.markVerifiedAndIssue(phone);
   }
 
   async login(dto: LoginDto): Promise<TokensDto> {
@@ -77,8 +93,7 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  /** Marque le téléphone vérifié et émet les tokens. Réutilisé par T2.2. */
-  async markVerifiedAndIssue(phone: string): Promise<TokensDto> {
+  private async markVerifiedAndIssue(phone: string): Promise<TokensDto> {
     const user = await this.users.findOne({ where: { phone } });
     if (!user) throw new BadRequestException("Code incorrect, expiré ou trop d'essais");
     if (!user.phoneVerified) {
@@ -97,7 +112,7 @@ export class AuthService {
         ? await this.institutions.findOne({ where: { id: user.institutionId } })
         : null;
       if (!inst || inst.validationStatus !== ValidationStatus.Valide) {
-        throw new ForbiddenException("Établissement non validé par un administrateur");
+        throw new ForbiddenException('Établissement non validé par un administrateur');
       }
     }
   }
