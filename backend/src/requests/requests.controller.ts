@@ -1,0 +1,138 @@
+// AJOUT : T3 - squelette du contrôleur requests (données mockées, services réels en T4.4, T4.5 et T5.5)
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { ErrorResponseDto } from '../common/dto/error-response.dto';
+import { BloodGroup, RequestStatus, UrgencyLevel, UserRole } from '../common/enums';
+import { MOCK_IDS, MOCK_NOW } from '../contract/mocks';
+import {
+  CreateRequestDto,
+  LiveStateDto,
+  RequestDto,
+  RespondDto,
+  RespondResultDto,
+} from './dto/requests.dto';
+
+const mockRequest = (id: string = MOCK_IDS.request): RequestDto => ({
+  id,
+  institutionId: MOCK_IDS.institution,
+  institutionName: 'Hôpital Charles Nicolle',
+  bloodGroup: BloodGroup.A_POS,
+  quantity: 10,
+  urgency: UrgencyLevel.URGENTE,
+  deadline: '2026-10-03T18:00:00.000Z',
+  initialRadiusKm: 5,
+  currentRadiusKm: 5,
+  maxRadiusKm: 30,
+  status: RequestStatus.ACTIVE,
+  anomalyScore: 0.12,
+  createdAt: MOCK_NOW,
+});
+
+@ApiTags('requests')
+@Controller('requests')
+export class RequestsController {
+  @Post()
+  @ApiRoles(UserRole.HOPITAL)
+  @ApiOperation({
+    summary: 'Créer une demande urgente',
+    description:
+      "Réservé à un hôpital dont l'établissement est validé. Si le score d'anomalie est élevé, la demande passe en en_revue et aucune alerte n'est envoyée avant validation manuelle. Sinon la vague 1 démarre immédiatement (moins de 10 s).",
+  })
+  @ApiCreatedResponse({ type: RequestDto })
+  @ApiBadRequestResponse({ type: ErrorResponseDto })
+  create(@Body() dto: CreateRequestDto): RequestDto {
+    return {
+      ...mockRequest(),
+      bloodGroup: dto.bloodGroup,
+      quantity: dto.quantity,
+      urgency: dto.urgency,
+      deadline: dto.deadline,
+      initialRadiusKm: dto.initialRadiusKm ?? 10,
+      currentRadiusKm: dto.initialRadiusKm ?? 10,
+    };
+  }
+
+  @Get()
+  @ApiRoles(UserRole.HOPITAL, UserRole.DIRECTION, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Lister les demandes',
+    description: "Pour un hôpital : ses demandes. Pour la direction et l'admin : toutes.",
+  })
+  @ApiQuery({ name: 'status', enum: RequestStatus, enumName: 'RequestStatus', required: false })
+  @ApiOkResponse({ type: [RequestDto] })
+  list(@Query('status') _status?: RequestStatus): RequestDto[] {
+    return [mockRequest()];
+  }
+
+  @Get(':id')
+  @ApiRoles(UserRole.HOPITAL, UserRole.DIRECTION, UserRole.ADMIN, UserRole.DONNEUR)
+  @ApiOperation({ summary: "Détail d'une demande" })
+  @ApiParam({ name: 'id', example: MOCK_IDS.request })
+  @ApiOkResponse({ type: RequestDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  getOne(@Param('id', ParseUUIDPipe) id: string): RequestDto {
+    return mockRequest(id);
+  }
+
+  @Get(':id/live')
+  @ApiRoles(UserRole.HOPITAL, UserRole.DIRECTION, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'État courant du suivi en direct',
+    description:
+      "Chargement initial de l'écran de suivi. Ensuite, les mises à jour arrivent par WebSocket (namespace /live, voir docs/ws-live.md).",
+  })
+  @ApiParam({ name: 'id', example: MOCK_IDS.request })
+  @ApiOkResponse({ type: LiveStateDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  live(@Param('id', ParseUUIDPipe) id: string): LiveStateDto {
+    return {
+      requestId: id,
+      status: RequestStatus.ACTIVE,
+      currentRadiusKm: 5,
+      gauge: { accepted: 1, needed: 10, percent: 10 },
+      waves: [{ number: 1, radiusKm: 5, sentTo: 2, coverage: 10, createdAt: MOCK_NOW }],
+      donorsEnRoute: [
+        {
+          anonymousId: 'don-7f3a',
+          bloodGroup: BloodGroup.O_POS,
+          distanceKm: 3.2,
+          respondedAt: '2026-10-03T10:31:12.000Z',
+        },
+      ],
+    };
+  }
+
+  @Post(':id/respond')
+  @HttpCode(200)
+  @ApiRoles(UserRole.DONNEUR)
+  @ApiOperation({
+    summary: 'Répondre à une alerte (Je viens / Je ne peux pas)',
+    description:
+      "Contrôle serveur : demande encore active, donneur compatible et éligible, délai entre dons écoulé (3ᵉ niveau de F2.4). Une seule réponse par donneur et par demande.",
+  })
+  @ApiParam({ name: 'id', example: MOCK_IDS.request })
+  @ApiOkResponse({ type: RespondResultDto })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: 'Déjà répondu, demande close, ou donneur non éligible à ce jour',
+  })
+  respond(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RespondDto): RespondResultDto {
+    return {
+      requestId: id,
+      response: dto.response,
+      accepted: true,
+      gauge: { accepted: 2, needed: 10, percent: 20 },
+    };
+  }
+}
