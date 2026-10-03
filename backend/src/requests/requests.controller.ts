@@ -1,4 +1,5 @@
-// AJOUT : T3 - squelette du contrôleur requests (données mockées, services réels en T4.4, T4.5 et T5.5)
+// T3 : squelette (données mockées, services réels en T4.4, T4.5 et T5.5).
+// T2.4 : POST /requests exige un établissement validé (F5).
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -11,10 +12,13 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { BloodGroup, RequestStatus, UrgencyLevel, UserRole } from '../common/enums';
 import { MOCK_IDS, MOCK_NOW } from '../contract/mocks';
+import { InstitutionsService } from '../institutions/institutions.service';
 import {
   CreateRequestDto,
   LiveStateDto,
@@ -42,6 +46,8 @@ const mockRequest = (id: string = MOCK_IDS.request): RequestDto => ({
 @ApiTags('requests')
 @Controller('requests')
 export class RequestsController {
+  constructor(private readonly institutions: InstitutionsService) {}
+
   @Post()
   @ApiRoles(UserRole.HOPITAL)
   @ApiOperation({
@@ -51,9 +57,12 @@ export class RequestsController {
   })
   @ApiCreatedResponse({ type: RequestDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
-  create(@Body() dto: CreateRequestDto): RequestDto {
+  async create(@Body() dto: CreateRequestDto, @CurrentUser() user: AuthenticatedUser): Promise<RequestDto> {
+    const inst = await this.institutions.assertHospitalValidated(user.id);
     return {
       ...mockRequest(),
+      institutionId: inst.id,
+      institutionName: inst.name,
       bloodGroup: dto.bloodGroup,
       quantity: dto.quantity,
       urgency: dto.urgency,

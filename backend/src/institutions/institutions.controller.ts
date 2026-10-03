@@ -1,4 +1,3 @@
-// AJOUT : T3 - squelette du contrôleur institutions (DTO inclus, services réels en T2.4)
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiCreatedResponse,
@@ -13,11 +12,14 @@ import {
 } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { GeoPointDto } from '../common/dto/geo-point.dto';
 import { InstitutionType, UserRole, ValidationStatus } from '../common/enums';
-import { MOCK_HOSPITAL_POSITION, MOCK_IDS } from '../contract/mocks';
+import { MOCK_IDS } from '../contract/mocks';
+import { InstitutionsService } from './institutions.service';
 
 export class CreateInstitutionDto {
   @ApiProperty({ example: 'Hôpital Charles Nicolle' })
@@ -69,18 +71,11 @@ export class InstitutionDto {
   position?: GeoPointDto;
 }
 
-const mockInstitution = (validationStatus = ValidationStatus.VALIDE): InstitutionDto => ({
-  id: MOCK_IDS.institution,
-  name: 'Hôpital Charles Nicolle',
-  type: InstitutionType.HOPITAL,
-  validationStatus,
-  address: 'Boulevard 9 Avril 1938, Tunis',
-  position: MOCK_HOSPITAL_POSITION,
-});
-
 @ApiTags('institutions')
 @Controller('institutions')
 export class InstitutionsController {
+  constructor(private readonly institutions: InstitutionsService) {}
+
   @Post()
   @ApiRoles(UserRole.HOPITAL, UserRole.CRT, UserRole.ADMIN)
   @ApiOperation({
@@ -88,8 +83,8 @@ export class InstitutionsController {
     description: "Créé en en_attente. Il doit être validé par un admin avant de pouvoir créer des demandes.",
   })
   @ApiCreatedResponse({ type: InstitutionDto })
-  create(@Body() _dto: CreateInstitutionDto): InstitutionDto {
-    return mockInstitution(ValidationStatus.EN_ATTENTE);
+  create(@Body() dto: CreateInstitutionDto, @CurrentUser() user: AuthenticatedUser): Promise<InstitutionDto> {
+    return this.institutions.create(dto, user);
   }
 
   @Get()
@@ -97,8 +92,8 @@ export class InstitutionsController {
   @ApiOperation({ summary: 'Lister les établissements (carte et filtres)' })
   @ApiQuery({ name: 'validationStatus', enum: ValidationStatus, enumName: 'ValidationStatus', required: false })
   @ApiOkResponse({ type: [InstitutionDto] })
-  list(@Query('validationStatus') _validationStatus?: ValidationStatus): InstitutionDto[] {
-    return [mockInstitution()];
+  list(@Query('validationStatus') validationStatus?: ValidationStatus): Promise<InstitutionDto[]> {
+    return this.institutions.list(validationStatus);
   }
 
   @Patch(':id/validate')
@@ -108,9 +103,9 @@ export class InstitutionsController {
   @ApiOkResponse({ type: InstitutionDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   validate(
-    @Param('id', ParseUUIDPipe) _id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ValidateInstitutionDto,
-  ): InstitutionDto {
-    return mockInstitution(dto.validationStatus);
+  ): Promise<InstitutionDto> {
+    return this.institutions.validate(id, dto.validationStatus);
   }
 }

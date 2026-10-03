@@ -107,14 +107,6 @@ export class AuthService {
   private async assertUsable(user: User): Promise<void> {
     if (user.status !== UserStatus.Actif) throw new UnauthorizedException('Compte suspendu');
     if (!user.phoneVerified) throw new UnauthorizedException('Téléphone non vérifié');
-    if (user.role === UserRole.Hopital || user.role === UserRole.Crt) {
-      const inst = user.institutionId
-        ? await this.institutions.findOne({ where: { id: user.institutionId } })
-        : null;
-      if (!inst || inst.validationStatus !== ValidationStatus.Valide) {
-        throw new ForbiddenException('Établissement non validé par un administrateur');
-      }
-    }
   }
 
   private async issueTokens(user: User): Promise<TokensDto> {
