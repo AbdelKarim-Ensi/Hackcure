@@ -1,6 +1,5 @@
-// AJOUT : T3 - décorateur de documentation des rôles.
-// Pour l'instant il ne fait que documenter (Swagger). En T2.3, le même décorateur
-// pourra aussi poser les métadonnées lues par RolesGuard.
+// T3 : documentation Swagger des rôles.
+// T2.3 : pose aussi les métadonnées lues par RolesGuard (via @Roles).
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -10,9 +9,11 @@ import {
 } from '@nestjs/swagger';
 import { UserRole } from '../enums';
 import { ErrorResponseDto } from '../dto/error-response.dto';
+import { Roles } from './roles.decorator';
 
 export function ApiRoles(...roles: UserRole[]) {
   return applyDecorators(
+    Roles(...roles),
     ApiBearerAuth(),
     ApiExtension('x-roles', roles),
     ApiUnauthorizedResponse({
