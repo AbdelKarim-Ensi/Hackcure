@@ -1,0 +1,3673 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "description": "Crée le compte (téléphone + mot de passe) et envoie un code OTP. Le compte reste non vérifié jusqu'à /auth/otp/verify.",
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Données invalides ou téléphone déjà utilisé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Créer un compte",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/otp/send": {
+      "post": {
+        "description": "Limité en débit (quota strict, T7.3).",
+        "operationId": "AuthController_sendOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpSendDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpSendResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Renvoyer un code OTP",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/otp/verify": {
+      "post": {
+        "description": "Marque le téléphone comme vérifié et renvoie les tokens JWT.",
+        "operationId": "AuthController_verifyOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokensDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Code incorrect, expiré ou trop d'essais",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Vérifier le code OTP",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokensDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Identifiants invalides",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connexion par téléphone et mot de passe",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokensDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Renouveler les tokens",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/users/me/device-token": {
+      "put": {
+        "description": "À appeler après la connexion et à chaque renouvellement du jeton.",
+        "operationId": "UsersController_setDeviceToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Jeton enregistré"
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enregistrer le jeton FCM de l'appareil",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "donneur",
+          "hopital",
+          "crt",
+          "direction",
+          "admin"
+        ]
+      }
+    },
+    "/donors/register": {
+      "post": {
+        "description": "À appeler après la vérification OTP. Crée le profil (groupe déclaré, zone, position consentie). Le statut d'éligibilité reste en_attente jusqu'au formulaire.",
+        "operationId": "DonorsController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DonorRegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DonorProfileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Consentement manquant ou données invalides",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Créer le profil donneur",
+        "tags": [
+          "donors"
+        ],
+        "x-roles": [
+          "donneur"
+        ]
+      }
+    },
+    "/donors/me": {
+      "get": {
+        "operationId": "DonorsController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DonorProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mon profil donneur",
+        "tags": [
+          "donors"
+        ],
+        "x-roles": [
+          "donneur"
+        ]
+      },
+      "patch": {
+        "description": "Disponibilité, zone, position (action explicite), rayon maximal, alertes et plage de silence.",
+        "operationId": "DonorsController_updateMe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDonorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DonorProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Modifier mon profil et mes préférences",
+        "tags": [
+          "donors"
+        ],
+        "x-roles": [
+          "donneur"
+        ]
+      }
+    },
+    "/donors/{id}/eligibility-form": {
+      "post": {
+        "description": "Les règles (fonctions pures de M2) calculent le résultat. Les réponses sont chiffrées en base. Seul un donneur eligible reçoit des alertes.",
+        "operationId": "DonorsController_submitEligibilityForm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "userId du donneur (doit être le sien)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EligibilityFormDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EligibilityResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soumettre le formulaire d'éligibilité",
+        "tags": [
+          "donors"
+        ],
+        "x-roles": [
+          "donneur"
+        ]
+      }
+    },
+    "/donors/{id}/next-donation-date": {
+      "get": {
+        "operationId": "DonorsController_nextDonationDate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "userId du donneur",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextDonationDateDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Date du prochain don possible",
+        "tags": [
+          "donors"
+        ],
+        "x-roles": [
+          "donneur",
+          "hopital",
+          "crt"
+        ]
+      }
+    },
+    "/institutions": {
+      "post": {
+        "description": "Créé en en_attente. Il doit être validé par un admin avant de pouvoir créer des demandes.",
+        "operationId": "InstitutionsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInstitutionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital, crt, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Déclarer un établissement",
+        "tags": [
+          "institutions"
+        ],
+        "x-roles": [
+          "hopital",
+          "crt",
+          "admin"
+        ]
+      },
+      "get": {
+        "operationId": "InstitutionsController_list",
+        "parameters": [
+          {
+            "name": "validationStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ValidationStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstitutionDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lister les établissements (carte et filtres)",
+        "tags": [
+          "institutions"
+        ],
+        "x-roles": [
+          "donneur",
+          "hopital",
+          "crt",
+          "direction",
+          "admin"
+        ]
+      }
+    },
+    "/institutions/{id}/validate": {
+      "patch": {
+        "operationId": "InstitutionsController_validate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "a1b2c3d4-0001-4aaa-8bbb-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateInstitutionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Valider ou rejeter un établissement",
+        "tags": [
+          "institutions"
+        ],
+        "x-roles": [
+          "admin"
+        ]
+      }
+    },
+    "/requests": {
+      "post": {
+        "description": "Réservé à un hôpital dont l'établissement est validé. Si le score d'anomalie est élevé, la demande passe en en_revue et aucune alerte n'est envoyée avant validation manuelle. Sinon la vague 1 démarre immédiatement (moins de 10 s).",
+        "operationId": "RequestsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Créer une demande urgente",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
+          "hopital"
+        ]
+      },
+      "get": {
+        "description": "Pour un hôpital : ses demandes. Pour la direction et l'admin : toutes.",
+        "operationId": "RequestsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/RequestStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RequestDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lister les demandes",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
+          "hopital",
+          "direction",
+          "admin"
+        ]
+      }
+    },
+    "/requests/{id}": {
+      "get": {
+        "operationId": "RequestsController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital, direction, admin, donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Détail d'une demande",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
+          "hopital",
+          "direction",
+          "admin",
+          "donneur"
+        ]
+      }
+    },
+    "/requests/{id}/live": {
+      "get": {
+        "description": "Chargement initial de l'écran de suivi. Ensuite, les mises à jour arrivent par WebSocket (namespace /live, voir docs/ws-live.md).",
+        "operationId": "RequestsController_live",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveStateDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "État courant du suivi en direct",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
+          "hopital",
+          "direction",
+          "admin"
+        ]
+      }
+    },
+    "/requests/{id}/respond": {
+      "post": {
+        "description": "Contrôle serveur : demande encore active, donneur compatible et éligible, délai entre dons écoulé (3ᵉ niveau de F2.4). Une seule réponse par donneur et par demande.",
+        "operationId": "RequestsController_respond",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespondResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Déjà répondu, demande close, ou donneur non éligible à ce jour",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Répondre à une alerte (Je viens / Je ne peux pas)",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
+          "donneur"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "description": "Liste filtrable par gouvernorat, date et distance (F4.2).",
+        "operationId": "EventsController_list",
+        "parameters": [
+          {
+            "name": "governorate",
+            "required": false,
+            "in": "query",
+            "description": "Gouvernorat ou ville",
+            "schema": {
+              "example": "Tunis",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Date minimale (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-10-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "Date maximale (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-10-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "required": false,
+            "in": "query",
+            "description": "Latitude de référence pour le filtre de distance",
+            "schema": {
+              "example": 36.8065,
+              "type": "number"
+            }
+          },
+          {
+            "name": "lng",
+            "required": false,
+            "in": "query",
+            "description": "Longitude de référence pour le filtre de distance",
+            "schema": {
+              "example": 10.1815,
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxDistanceKm",
+            "required": false,
+            "in": "query",
+            "description": "Distance maximale en km (nécessite lat et lng)",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, crt, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Calendrier des événements",
+        "tags": [
+          "events"
+        ],
+        "x-roles": [
+          "donneur",
+          "crt",
+          "direction",
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "Déclenche les notifications de priorité normale aux donneurs éligibles de la zone, sans vagues. L'événement apparaît dans le calendrier en moins de 5 s.",
+        "operationId": "EventsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publier un événement",
+        "tags": [
+          "events"
+        ],
+        "x-roles": [
+          "crt"
+        ]
+      }
+    },
+    "/events/{id}": {
+      "get": {
+        "operationId": "EventsController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, crt, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Détail d'un événement",
+        "tags": [
+          "events"
+        ],
+        "x-roles": [
+          "donneur",
+          "crt",
+          "direction",
+          "admin"
+        ]
+      }
+    },
+    "/events/{id}/register": {
+      "post": {
+        "description": "Refusée (422) si le donneur n'est pas éligible à la date de l'événement (règle R5, délai entre dons) ou (409) si la capacité est atteinte.",
+        "operationId": "EventsController_register",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRegistrationDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Capacité atteinte ou déjà inscrit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Donneur non éligible à la date de l'événement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "S'inscrire à un créneau",
+        "tags": [
+          "events"
+        ],
+        "x-roles": [
+          "donneur"
+        ]
+      }
+    },
+    "/events/{id}/checkin": {
+      "post": {
+        "description": "Par QR code ou pointage manuel. Marque la présence, enregistre le don et recalcule la date du prochain don.",
+        "operationId": "EventsController_checkin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinResultDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inscription introuvable ou jeton invalide",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pointer un donneur présent",
+        "tags": [
+          "events"
+        ],
+        "x-roles": [
+          "crt"
+        ]
+      }
+    },
+    "/events/{id}/dashboard": {
+      "get": {
+        "operationId": "EventsController_dashboard",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDashboardDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : crt, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Tableau de bord de l'organisateur",
+        "tags": [
+          "events"
+        ],
+        "x-roles": [
+          "crt",
+          "direction",
+          "admin"
+        ]
+      }
+    },
+    "/donations/confirm": {
+      "post": {
+        "description": "Enregistre le don, met à jour la date du dernier don et recalcule la date du prochain don possible (F2.1, F2.2).",
+        "operationId": "DonationsController_confirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmDonationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DonationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital, crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmer un don",
+        "tags": [
+          "donations"
+        ],
+        "x-roles": [
+          "hopital",
+          "crt"
+        ]
+      }
+    },
+    "/stocks": {
+      "get": {
+        "description": "Alimente la carte des stocks (rouge, orange, vert). Un hôpital ne voit que son établissement, la direction voit tout.",
+        "operationId": "StocksController_list",
+        "parameters": [
+          {
+            "name": "institutionId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "a1b2c3d4-0001-4aaa-8bbb-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstitutionStockDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stocks par établissement et par groupe sanguin",
+        "tags": [
+          "stocks"
+        ],
+        "x-roles": [
+          "hopital",
+          "direction",
+          "admin"
+        ]
+      }
+    },
+    "/notifications/me": {
+      "get": {
+        "description": "Historique des alertes et rappels, du plus récent au plus ancien. Sert d'écran « Mes alertes » dans l'app.",
+        "operationId": "NotificationsController_listMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mes notifications",
+        "tags": [
+          "notifications"
+        ],
+        "x-roles": [
+          "donneur",
+          "hopital",
+          "crt"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Damm API",
+    "description": "Plateforme intelligente de don de sang (HackCure 48 h).\n\nContrat v1 : toute modification passe par une PR sur docs/openapi.json et est annoncée à l'équipe.\nLe suivi en direct (WebSocket /live) est décrit dans docs/ws-live.md ; ses charges utiles\net celle de l'alerte FCM figurent dans les schémas WsGaugeEventDto, WsDonorEnRouteEventDto,\nWsWaveStartedEventDto et AlertPayloadDto.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+21612345678",
+            "description": "Numéro de téléphone (identifiant de connexion)"
+          },
+          "password": {
+            "type": "string",
+            "example": "MotDePasse#2026",
+            "minLength": 8
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Amine Ben Salah"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "donneur",
+              "hopital",
+              "crt"
+            ],
+            "default": "donneur",
+            "description": "Rôle demandé. Les comptes hopital et crt restent inutilisables tant que l'établissement n'est pas validé par un admin."
+          }
+        },
+        "required": [
+          "phone",
+          "password"
+        ]
+      },
+      "RegisterResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
+          },
+          "otpSent": {
+            "type": "boolean",
+            "example": true,
+            "description": "Un code OTP a été envoyé par SMS"
+          },
+          "devOtp": {
+            "type": "string",
+            "example": "123456",
+            "description": "Renvoyé uniquement en mode démo (OTP_DEV_MODE=true), jamais en production"
+          }
+        },
+        "required": [
+          "userId",
+          "otpSent"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "message": {
+            "description": "Message lisible, ou liste de messages de validation",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": [
+              "phone must be a valid phone number"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message",
+          "error"
+        ]
+      },
+      "OtpSendDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+21612345678"
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "OtpSendResponseDto": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "boolean",
+            "example": true
+          },
+          "expiresInSeconds": {
+            "type": "number",
+            "example": 300,
+            "description": "Durée de vie du code en secondes (TTL Redis)"
+          },
+          "devOtp": {
+            "type": "string",
+            "example": "123456",
+            "description": "Mode démo uniquement"
+          }
+        },
+        "required": [
+          "sent",
+          "expiresInSeconds"
+        ]
+      },
+      "OtpVerifyDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+21612345678"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "description": "Code à 6 chiffres"
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "donneur",
+          "hopital",
+          "crt",
+          "direction",
+          "admin"
+        ]
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
+          },
+          "role": {
+            "example": "donneur",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "example": "+21612345678"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Amine Ben Salah"
+          },
+          "institutionId": {
+            "type": "string",
+            "example": "a1b2c3d4-0001-4aaa-8bbb-000000000001",
+            "description": "Établissement rattaché (rôles hopital et crt)"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "phone"
+        ]
+      },
+      "TokensDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT court, à envoyer en Authorization: Bearer <token>"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "JWT long, sert uniquement à POST /auth/refresh"
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 900,
+            "description": "Durée de vie de l'access token en secondes"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUserDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+21612345678"
+          },
+          "password": {
+            "type": "string",
+            "example": "MotDePasse#2026"
+          }
+        },
+        "required": [
+          "phone",
+          "password"
+        ]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token obtenu à la connexion"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "DeviceTokenDto": {
+        "type": "object",
+        "properties": {
+          "fcmToken": {
+            "type": "string",
+            "description": "Jeton FCM de l'appareil",
+            "example": "fcm-device-token-xyz"
+          }
+        },
+        "required": [
+          "fcmToken"
+        ]
+      },
+      "BloodGroup": {
+        "type": "string",
+        "enum": [
+          "A+",
+          "A-",
+          "B+",
+          "B-",
+          "AB+",
+          "AB-",
+          "O+",
+          "O-"
+        ],
+        "description": "Groupe déclaré, à confirmer au 1er don"
+      },
+      "Sex": {
+        "type": "string",
+        "enum": [
+          "homme",
+          "femme"
+        ]
+      },
+      "GeoPointDto": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "example": 36.8065,
+            "description": "Latitude (WGS 84)"
+          },
+          "longitude": {
+            "type": "number",
+            "example": 10.1815,
+            "description": "Longitude (WGS 84)"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ]
+      },
+      "DonorRegisterDto": {
+        "type": "object",
+        "properties": {
+          "bloodGroup": {
+            "example": "A+",
+            "description": "Groupe déclaré, à confirmer au 1er don",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "sex": {
+            "example": "homme",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sex"
+              }
+            ]
+          },
+          "zone": {
+            "type": "string",
+            "example": "Tunis",
+            "description": "Zone ou gouvernorat"
+          },
+          "position": {
+            "description": "Position approximative consentie (F3.8), jamais de suivi continu",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GeoPointDto"
+              }
+            ]
+          },
+          "available": {
+            "type": "boolean",
+            "default": true
+          },
+          "consent": {
+            "type": "boolean",
+            "example": true,
+            "description": "Consentement explicite (santé et géolocalisation). Doit être true."
+          }
+        },
+        "required": [
+          "bloodGroup",
+          "zone",
+          "position",
+          "consent"
+        ]
+      },
+      "EligibilityStatus": {
+        "type": "string",
+        "enum": [
+          "en_attente",
+          "eligible",
+          "temporaire",
+          "definitif"
+        ],
+        "description": "Seuls les profils eligible reçoivent des alertes"
+      },
+      "QuietHoursDto": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "example": "22:00",
+            "description": "Début de la plage de silence (HH:mm)"
+          },
+          "end": {
+            "type": "string",
+            "example": "07:00",
+            "description": "Fin de la plage de silence (HH:mm)"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ]
+      },
+      "NotifPrefsDto": {
+        "type": "object",
+        "properties": {
+          "alertsEnabled": {
+            "type": "boolean",
+            "example": true
+          },
+          "quietHours": {
+            "nullable": true,
+            "description": "Plage de silence. Ignorée pour les urgences critiques (F3.6).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuietHoursDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "alertsEnabled"
+        ]
+      },
+      "DonorProfileDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Amine Ben Salah"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+21612345678"
+          },
+          "bloodGroup": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "bloodGroupConfirmed": {
+            "type": "boolean",
+            "example": false,
+            "description": "true après confirmation au 1er don"
+          },
+          "sex": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sex"
+              }
+            ]
+          },
+          "zone": {
+            "type": "string",
+            "example": "Tunis"
+          },
+          "position": {
+            "$ref": "#/components/schemas/GeoPointDto"
+          },
+          "available": {
+            "type": "boolean",
+            "example": true
+          },
+          "eligibilityStatus": {
+            "description": "Seuls les profils eligible reçoivent des alertes",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EligibilityStatus"
+              }
+            ]
+          },
+          "reevalDate": {
+            "type": "string",
+            "example": "2027-01-15",
+            "description": "Date de réévaluation (statut temporaire)"
+          },
+          "lastDonationDate": {
+            "type": "string",
+            "example": "2026-06-12"
+          },
+          "nextDonationPossibleDate": {
+            "type": "string",
+            "example": "2026-09-10",
+            "description": "Affichage : « Prochain don possible le JJ/MM »"
+          },
+          "maxRadiusKm": {
+            "type": "number",
+            "example": 20
+          },
+          "notifPrefs": {
+            "$ref": "#/components/schemas/NotifPrefsDto"
+          },
+          "consentAt": {
+            "type": "string",
+            "example": "2026-10-03T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "userId",
+          "phone",
+          "bloodGroup",
+          "bloodGroupConfirmed",
+          "available",
+          "eligibilityStatus",
+          "maxRadiusKm",
+          "notifPrefs"
+        ]
+      },
+      "UpdateDonorDto": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "type": "string",
+            "example": "Ariana"
+          },
+          "position": {
+            "description": "Mise à jour explicite de la position (action volontaire)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GeoPointDto"
+              }
+            ]
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "maxRadiusKm": {
+            "type": "number",
+            "example": 20,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Rayon maximal accepté pour les alertes"
+          },
+          "notifPrefs": {
+            "$ref": "#/components/schemas/NotifPrefsDto"
+          }
+        }
+      },
+      "EligibilityFormDto": {
+        "type": "object",
+        "properties": {
+          "age": {
+            "type": "number",
+            "example": 27,
+            "minimum": 0
+          },
+          "weightKg": {
+            "type": "number",
+            "example": 72,
+            "description": "Poids en kg"
+          },
+          "lastDonationDate": {
+            "type": "string",
+            "example": "2026-06-12",
+            "description": "Date du dernier don, si déjà donné (y compris hors plateforme, F2.6)"
+          },
+          "chronicDisease": {
+            "type": "boolean",
+            "example": false,
+            "description": "Maladie chronique"
+          },
+          "onTreatment": {
+            "type": "boolean",
+            "example": false,
+            "description": "Traitement en cours"
+          },
+          "hepatitisOrHivHistory": {
+            "type": "boolean",
+            "example": false,
+            "description": "Antécédents d'hépatite ou de VIH"
+          },
+          "recentSurgery": {
+            "type": "boolean",
+            "example": false,
+            "description": "Intervention chirurgicale récente"
+          },
+          "recentTattooOrPiercing": {
+            "type": "boolean",
+            "example": false,
+            "description": "Tatouage ou piercing récent"
+          },
+          "recentTransfusion": {
+            "type": "boolean",
+            "example": false,
+            "description": "Transfusion récente"
+          },
+          "riskAreaTravel": {
+            "type": "boolean",
+            "example": false,
+            "description": "Voyage récent en zone à risque"
+          },
+          "recentVaccination": {
+            "type": "boolean",
+            "example": false,
+            "description": "Vaccination récente"
+          },
+          "recentFeverOrInfection": {
+            "type": "boolean",
+            "example": false,
+            "description": "Fièvre ou infection récente"
+          },
+          "pregnantOrBreastfeeding": {
+            "type": "boolean",
+            "example": false,
+            "description": "Grossesse ou allaitement (le cas échéant)"
+          },
+          "consent": {
+            "type": "boolean",
+            "example": true,
+            "description": "Consentement explicite au traitement des données de santé"
+          }
+        },
+        "required": [
+          "age",
+          "weightKg",
+          "chronicDisease",
+          "onTreatment",
+          "hepatitisOrHivHistory",
+          "recentSurgery",
+          "recentTattooOrPiercing",
+          "recentTransfusion",
+          "riskAreaTravel",
+          "recentVaccination",
+          "recentFeverOrInfection",
+          "consent"
+        ]
+      },
+      "EligibilityResultDto": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "example": "eligible",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EligibilityStatus"
+              }
+            ]
+          },
+          "reevalDate": {
+            "type": "string",
+            "example": "2027-01-15",
+            "description": "Présente si result = temporaire"
+          },
+          "reasons": {
+            "example": [],
+            "description": "Motifs lisibles (inéligibilité). Jamais de détail médical brut.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "questionnaireVersion": {
+            "type": "string",
+            "example": "v1"
+          },
+          "medicalConfirmationRequired": {
+            "type": "boolean",
+            "example": true,
+            "description": "Toujours true : l'éligibilité finale est confirmée par le personnel médical le jour du don (R6)"
+          }
+        },
+        "required": [
+          "result",
+          "questionnaireVersion",
+          "medicalConfirmationRequired"
+        ]
+      },
+      "NextDonationDateDto": {
+        "type": "object",
+        "properties": {
+          "nextDonationPossibleDate": {
+            "type": "object",
+            "example": "2026-09-10",
+            "nullable": true,
+            "description": "null si le donneur n'a jamais donné"
+          },
+          "canDonateNow": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Vous pouvez donner dès maintenant"
+          }
+        },
+        "required": [
+          "canDonateNow",
+          "message"
+        ]
+      },
+      "InstitutionType": {
+        "type": "string",
+        "enum": [
+          "hopital",
+          "banque_sang",
+          "centre_transfusion"
+        ]
+      },
+      "CreateInstitutionDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "type": {
+            "example": "hopital",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InstitutionType"
+              }
+            ]
+          },
+          "address": {
+            "type": "string",
+            "example": "Boulevard 9 Avril 1938, Tunis"
+          },
+          "position": {
+            "$ref": "#/components/schemas/GeoPointDto"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "position"
+        ]
+      },
+      "ValidationStatus": {
+        "type": "string",
+        "enum": [
+          "en_attente",
+          "valide",
+          "rejete"
+        ],
+        "description": "Seul un établissement valide peut créer une demande (F5)"
+      },
+      "InstitutionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a1b2c3d4-0001-4aaa-8bbb-000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InstitutionType"
+              }
+            ]
+          },
+          "validationStatus": {
+            "description": "Seul un établissement valide peut créer une demande (F5)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ValidationStatus"
+              }
+            ]
+          },
+          "address": {
+            "type": "string",
+            "example": "Boulevard 9 Avril 1938, Tunis"
+          },
+          "position": {
+            "$ref": "#/components/schemas/GeoPointDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "validationStatus"
+        ]
+      },
+      "ValidateInstitutionDto": {
+        "type": "object",
+        "properties": {
+          "validationStatus": {
+            "type": "string",
+            "enum": [
+              "valide",
+              "rejete"
+            ],
+            "example": "valide"
+          }
+        },
+        "required": [
+          "validationStatus"
+        ]
+      },
+      "UrgencyLevel": {
+        "type": "string",
+        "enum": [
+          "normale",
+          "urgente",
+          "critique"
+        ]
+      },
+      "CreateRequestDto": {
+        "type": "object",
+        "properties": {
+          "bloodGroup": {
+            "example": "A+",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "example": 10,
+            "minimum": 1,
+            "description": "Nombre de poches demandées"
+          },
+          "urgency": {
+            "example": "urgente",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UrgencyLevel"
+              }
+            ]
+          },
+          "deadline": {
+            "type": "string",
+            "example": "2026-10-03T18:00:00.000Z",
+            "description": "Échéance au-delà de laquelle la demande expire"
+          },
+          "initialRadiusKm": {
+            "type": "number",
+            "enum": [
+              5,
+              10,
+              20
+            ],
+            "default": 10,
+            "description": "Rayon initial en km, choisi par l'hôpital (F3.2)"
+          }
+        },
+        "required": [
+          "bloodGroup",
+          "quantity",
+          "urgency",
+          "deadline"
+        ]
+      },
+      "RequestStatus": {
+        "type": "string",
+        "enum": [
+          "en_revue",
+          "active",
+          "couverte",
+          "cloturee",
+          "expiree"
+        ],
+        "description": "en_revue = score d'anomalie élevé, validation manuelle requise avant toute alerte"
+      },
+      "RequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001"
+          },
+          "institutionId": {
+            "type": "string",
+            "example": "a1b2c3d4-0001-4aaa-8bbb-000000000001"
+          },
+          "institutionName": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "bloodGroup": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "example": 10
+          },
+          "urgency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UrgencyLevel"
+              }
+            ]
+          },
+          "deadline": {
+            "type": "string",
+            "example": "2026-10-03T18:00:00.000Z"
+          },
+          "initialRadiusKm": {
+            "type": "number",
+            "example": 5
+          },
+          "currentRadiusKm": {
+            "type": "number",
+            "example": 5,
+            "description": "Rayon actuel, élargi à chaque vague"
+          },
+          "maxRadiusKm": {
+            "type": "number",
+            "example": 30
+          },
+          "status": {
+            "description": "en_revue = score d'anomalie élevé, validation manuelle requise avant toute alerte",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RequestStatus"
+              }
+            ]
+          },
+          "anomalyScore": {
+            "type": "number",
+            "example": 0.12,
+            "description": "Score d'anomalie de 0 à 1 (M2)"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-03T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "institutionId",
+          "institutionName",
+          "bloodGroup",
+          "quantity",
+          "urgency",
+          "deadline",
+          "initialRadiusKm",
+          "currentRadiusKm",
+          "maxRadiusKm",
+          "status",
+          "createdAt"
+        ]
+      },
+      "GaugeDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "number",
+            "example": 3,
+            "description": "Donneurs ayant répondu « Je viens »"
+          },
+          "needed": {
+            "type": "number",
+            "example": 10,
+            "description": "Quantité demandée"
+          },
+          "percent": {
+            "type": "number",
+            "example": 30,
+            "description": "Pourcentage de couverture, plafonné à 100"
+          }
+        },
+        "required": [
+          "accepted",
+          "needed",
+          "percent"
+        ]
+      },
+      "WaveDto": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "number",
+            "example": 1
+          },
+          "radiusKm": {
+            "type": "number",
+            "example": 5
+          },
+          "sentTo": {
+            "type": "number",
+            "example": 2,
+            "description": "Donneurs alertés dans cette vague"
+          },
+          "coverage": {
+            "type": "number",
+            "example": 20,
+            "description": "Couverture constatée à la fin de la vague, en %"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-03T10:30:05.000Z"
+          }
+        },
+        "required": [
+          "number",
+          "radiusKm",
+          "sentTo",
+          "coverage",
+          "createdAt"
+        ]
+      },
+      "DonorEnRouteDto": {
+        "type": "object",
+        "properties": {
+          "anonymousId": {
+            "type": "string",
+            "example": "don-7f3a",
+            "description": "Identifiant anonyme, jamais le nom ni le téléphone"
+          },
+          "bloodGroup": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "example": 3.2,
+            "description": "Distance estimée à l'hôpital en km"
+          },
+          "respondedAt": {
+            "type": "string",
+            "example": "2026-10-03T10:31:12.000Z"
+          }
+        },
+        "required": [
+          "anonymousId",
+          "bloodGroup",
+          "distanceKm",
+          "respondedAt"
+        ]
+      },
+      "LiveStateDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RequestStatus"
+              }
+            ]
+          },
+          "currentRadiusKm": {
+            "type": "number",
+            "example": 5
+          },
+          "gauge": {
+            "$ref": "#/components/schemas/GaugeDto"
+          },
+          "waves": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WaveDto"
+            }
+          },
+          "donorsEnRoute": {
+            "description": "Liste anonymisée des donneurs en route",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DonorEnRouteDto"
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "status",
+          "currentRadiusKm",
+          "gauge",
+          "waves",
+          "donorsEnRoute"
+        ]
+      },
+      "ResponseType": {
+        "type": "string",
+        "enum": [
+          "je_viens",
+          "ne_peut_pas"
+        ]
+      },
+      "RespondDto": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "example": "je_viens",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResponseType"
+              }
+            ]
+          }
+        },
+        "required": [
+          "response"
+        ]
+      },
+      "RespondResultDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001"
+          },
+          "response": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResponseType"
+              }
+            ]
+          },
+          "accepted": {
+            "type": "boolean",
+            "example": true,
+            "description": "false si le contrôle serveur refuse (délai entre dons non écoulé, demande close). Voir le code HTTP 409."
+          },
+          "gauge": {
+            "$ref": "#/components/schemas/GaugeDto"
+          }
+        },
+        "required": [
+          "requestId",
+          "response",
+          "accepted",
+          "gauge"
+        ]
+      },
+      "EventSlotDto": {
+        "type": "object",
+        "properties": {
+          "time": {
+            "type": "string",
+            "example": "09:00",
+            "description": "Heure de début du créneau (HH:mm)"
+          },
+          "capacity": {
+            "type": "number",
+            "example": 20,
+            "description": "Capacité du créneau, sinon capacité globale"
+          }
+        },
+        "required": [
+          "time"
+        ]
+      },
+      "EventStatus": {
+        "type": "string",
+        "enum": [
+          "publie",
+          "annule",
+          "termine"
+        ]
+      },
+      "EventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001"
+          },
+          "organizerId": {
+            "type": "string",
+            "example": "9c4d1e83-6b72-4a05-b1f9-5d6e7f8a9b43"
+          },
+          "title": {
+            "type": "string",
+            "example": "Collecte de sang - Faculté des Sciences de Tunis"
+          },
+          "placeName": {
+            "type": "string",
+            "example": "Faculté des Sciences de Tunis"
+          },
+          "address": {
+            "type": "string",
+            "example": "Campus universitaire, 2092 Tunis"
+          },
+          "position": {
+            "$ref": "#/components/schemas/GeoPointDto"
+          },
+          "eventDate": {
+            "type": "string",
+            "example": "2026-10-15"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventSlotDto"
+            }
+          },
+          "capacity": {
+            "type": "number",
+            "example": 60
+          },
+          "registeredCount": {
+            "type": "number",
+            "example": 12,
+            "description": "Inscriptions actuelles (statut inscrit)"
+          },
+          "targetGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BloodGroup"
+            }
+          },
+          "conditions": {
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EventStatus"
+              }
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "example": 4.8,
+            "description": "Distance au point de référence, si lat et lng sont fournis"
+          }
+        },
+        "required": [
+          "id",
+          "organizerId",
+          "title",
+          "placeName",
+          "eventDate",
+          "slots",
+          "capacity",
+          "registeredCount",
+          "status"
+        ]
+      },
+      "CreateEventDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Collecte de sang - Faculté des Sciences de Tunis"
+          },
+          "placeName": {
+            "type": "string",
+            "example": "Faculté des Sciences de Tunis"
+          },
+          "address": {
+            "type": "string",
+            "example": "Campus universitaire, 2092 Tunis"
+          },
+          "position": {
+            "$ref": "#/components/schemas/GeoPointDto"
+          },
+          "eventDate": {
+            "type": "string",
+            "example": "2026-10-15",
+            "description": "Date de l'événement (YYYY-MM-DD)"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventSlotDto"
+            }
+          },
+          "capacity": {
+            "type": "number",
+            "example": 60,
+            "minimum": 1,
+            "description": "Capacité totale"
+          },
+          "targetGroups": {
+            "type": "array",
+            "description": "Groupes recherchés (optionnel)",
+            "items": {
+              "$ref": "#/components/schemas/BloodGroup"
+            }
+          },
+          "conditions": {
+            "type": "string",
+            "example": "Apporter une pièce d'identité"
+          }
+        },
+        "required": [
+          "title",
+          "placeName",
+          "position",
+          "eventDate",
+          "slots",
+          "capacity"
+        ]
+      },
+      "RegisterEventDto": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "string",
+            "example": "09:00",
+            "description": "Créneau choisi, doit exister dans slots"
+          }
+        },
+        "required": [
+          "slot"
+        ]
+      },
+      "RegistrationStatus": {
+        "type": "string",
+        "enum": [
+          "inscrit",
+          "present",
+          "absent",
+          "annule"
+        ]
+      },
+      "EventRegistrationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "d4e5f6a7-0001-4ddd-9eee-000000000001"
+          },
+          "eventId": {
+            "type": "string",
+            "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001"
+          },
+          "donorId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
+          },
+          "slot": {
+            "type": "string",
+            "example": "09:00"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegistrationStatus"
+              }
+            ]
+          },
+          "qrToken": {
+            "type": "string",
+            "description": "Jeton signé de courte durée à afficher en QR code pour le pointage",
+            "example": "signed.qr.token"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "donorId",
+          "slot",
+          "status"
+        ]
+      },
+      "DonationType": {
+        "type": "string",
+        "enum": [
+          "sang_total",
+          "plaquettes",
+          "plasma"
+        ]
+      },
+      "CheckinDto": {
+        "type": "object",
+        "properties": {
+          "qrToken": {
+            "type": "string",
+            "description": "Jeton lu depuis le QR code du donneur"
+          },
+          "donorId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61",
+            "description": "Pointage manuel par l'organisateur (alternative au QR)"
+          },
+          "donationType": {
+            "default": "sang_total",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationType"
+              }
+            ]
+          }
+        }
+      },
+      "CheckinResultDto": {
+        "type": "object",
+        "properties": {
+          "registration": {
+            "$ref": "#/components/schemas/EventRegistrationDto"
+          },
+          "donationId": {
+            "type": "string",
+            "example": "e5f6a7b8-0001-4eee-8fff-000000000001",
+            "description": "Don enregistré"
+          },
+          "nextDonationPossibleDate": {
+            "type": "string",
+            "example": "2027-01-03",
+            "description": "Prochain don possible, recalculé"
+          }
+        },
+        "required": [
+          "registration",
+          "donationId",
+          "nextDonationPossibleDate"
+        ]
+      },
+      "BloodGroupCountDto": {
+        "type": "object",
+        "properties": {
+          "bloodGroup": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "count": {
+            "type": "number",
+            "example": 4
+          }
+        },
+        "required": [
+          "bloodGroup",
+          "count"
+        ]
+      },
+      "EventDashboardDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001"
+          },
+          "registered": {
+            "type": "number",
+            "example": 42
+          },
+          "present": {
+            "type": "number",
+            "example": 35
+          },
+          "absent": {
+            "type": "number",
+            "example": 7
+          },
+          "donations": {
+            "type": "number",
+            "example": 33,
+            "description": "Dons réalisés"
+          },
+          "byBloodGroup": {
+            "description": "Répartition des dons par groupe",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BloodGroupCountDto"
+            }
+          }
+        },
+        "required": [
+          "eventId",
+          "registered",
+          "present",
+          "absent",
+          "donations",
+          "byBloodGroup"
+        ]
+      },
+      "DonationSource": {
+        "type": "string",
+        "enum": [
+          "urgence",
+          "evenement"
+        ]
+      },
+      "ConfirmDonationDto": {
+        "type": "object",
+        "properties": {
+          "donorId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61",
+            "description": "userId du donneur"
+          },
+          "type": {
+            "example": "sang_total",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationType"
+              }
+            ]
+          },
+          "source": {
+            "example": "urgence",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationSource"
+              }
+            ]
+          },
+          "donatedAt": {
+            "type": "string",
+            "example": "2026-10-03",
+            "description": "Date du don, aujourd'hui par défaut"
+          },
+          "place": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          }
+        },
+        "required": [
+          "donorId",
+          "type",
+          "source"
+        ]
+      },
+      "DonationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "e5f6a7b8-0001-4eee-8fff-000000000001"
+          },
+          "donorId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationType"
+              }
+            ]
+          },
+          "donatedAt": {
+            "type": "string",
+            "example": "2026-10-03"
+          },
+          "place": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "source": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationSource"
+              }
+            ]
+          },
+          "confirmedBy": {
+            "type": "string",
+            "example": "7b9e2c10-44aa-4f3b-8d21-0a1b2c3d4e52",
+            "description": "Membre du personnel ayant confirmé"
+          },
+          "nextDonationPossibleDate": {
+            "type": "string",
+            "example": "2027-01-03",
+            "description": "Prochain don possible, recalculé automatiquement"
+          }
+        },
+        "required": [
+          "id",
+          "donorId",
+          "type",
+          "donatedAt",
+          "source",
+          "confirmedBy",
+          "nextDonationPossibleDate"
+        ]
+      },
+      "StockLevel": {
+        "type": "string",
+        "enum": [
+          "rouge",
+          "orange",
+          "vert"
+        ],
+        "description": "rouge : quantité sous le seuil. orange : jusqu'à 1,5 fois le seuil. vert : au-delà."
+      },
+      "StockLineDto": {
+        "type": "object",
+        "properties": {
+          "bloodGroup": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "example": 6,
+            "description": "Poches en stock"
+          },
+          "alertThreshold": {
+            "type": "number",
+            "example": 10,
+            "description": "Seuil d'alerte"
+          },
+          "level": {
+            "description": "rouge : quantité sous le seuil. orange : jusqu'à 1,5 fois le seuil. vert : au-delà.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StockLevel"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bloodGroup",
+          "quantity",
+          "alertThreshold",
+          "level"
+        ]
+      },
+      "InstitutionStockDto": {
+        "type": "object",
+        "properties": {
+          "institutionId": {
+            "type": "string",
+            "example": "a1b2c3d4-0001-4aaa-8bbb-000000000001"
+          },
+          "institutionName": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "position": {
+            "description": "Pour placer le marqueur sur la carte",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GeoPointDto"
+              }
+            ]
+          },
+          "stocks": {
+            "description": "Une ligne par groupe sanguin (8 lignes)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockLineDto"
+            }
+          }
+        },
+        "required": [
+          "institutionId",
+          "institutionName",
+          "position",
+          "stocks"
+        ]
+      },
+      "NotificationType": {
+        "type": "string",
+        "enum": [
+          "urgence",
+          "evenement",
+          "rappel"
+        ]
+      },
+      "NotificationStatus": {
+        "type": "string",
+        "enum": [
+          "en_attente",
+          "envoyee",
+          "echec",
+          "lue"
+        ]
+      },
+      "NotificationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "f6a7b8c9-0001-4fff-9000-000000000001"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationType"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationStatus"
+              }
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Charge utile de la notification (voir AlertPayloadDto pour le type urgence). Jamais d'identité patient.",
+            "example": {
+              "requestId": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
+              "bloodGroup": "A+",
+              "hospitalName": "Hôpital Charles Nicolle",
+              "distanceKm": 3.2,
+              "urgency": "urgente"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-03T10:30:00.000Z"
+          },
+          "sentAt": {
+            "type": "string",
+            "example": "2026-10-03T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "payload",
+          "createdAt"
+        ]
+      },
+      "WsGaugeEventDto": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "example": "gauge",
+            "description": "Nom de l'événement Socket.IO"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001"
+          },
+          "gauge": {
+            "$ref": "#/components/schemas/GaugeDto"
+          }
+        },
+        "required": [
+          "event",
+          "requestId",
+          "gauge"
+        ]
+      },
+      "WsDonorEnRouteEventDto": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "example": "donor_en_route"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001"
+          },
+          "donor": {
+            "$ref": "#/components/schemas/DonorEnRouteDto"
+          }
+        },
+        "required": [
+          "event",
+          "requestId",
+          "donor"
+        ]
+      },
+      "WsWaveStartedEventDto": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "example": "wave_started"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001"
+          },
+          "wave": {
+            "$ref": "#/components/schemas/WaveDto"
+          }
+        },
+        "required": [
+          "event",
+          "requestId",
+          "wave"
+        ]
+      },
+      "AlertPayloadDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "urgence"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001"
+          },
+          "bloodGroup": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "hospitalName": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "distanceKm": {
+            "type": "number",
+            "example": 3.2,
+            "description": "Distance estimée donneur-hôpital en km"
+          },
+          "urgency": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UrgencyLevel"
+              }
+            ]
+          },
+          "deadline": {
+            "type": "string",
+            "example": "2026-10-03T18:00:00.000Z"
+          }
+        },
+        "required": [
+          "type",
+          "requestId",
+          "bloodGroup",
+          "hospitalName",
+          "distanceKm",
+          "urgency",
+          "deadline"
+        ]
+      }
+    }
+  }
+}
