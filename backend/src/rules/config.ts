@@ -1,4 +1,4 @@
-import { BloodGroup, DonationType, Sex } from './types.js';
+import { BloodGroup, DonationType, Sex } from './types';
 
 /**
  * Tous les paramètres des règles sont ici (source unique).

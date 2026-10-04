@@ -11,7 +11,7 @@ import {
   selectWave,
   latestDonationDate,
   iso,
-} from './index.js';
+} from './index';
 
 const NOW = new Date('2026-10-04T12:00:00Z');
 const base = { birthDate: '1995-06-15', weightKg: 72 };

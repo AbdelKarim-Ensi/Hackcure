@@ -1,6 +1,6 @@
-import { SCORING, WAVES } from './config.js';
-import { isCompatible } from './compatibility.js';
-import { canDonateOn } from './interval.js';
+import { SCORING, WAVES } from './config';
+import { isCompatible } from './compatibility';
+import { canDonateOn } from './interval';
 import {
   BloodRequestInput,
   Candidate,
@@ -8,7 +8,7 @@ import {
   RejectReason,
   ScoreComponents,
   Urgency,
-} from './types.js';
+} from './types';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const round1 = (x: number) => Math.round(x * 10) / 10;
