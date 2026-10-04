@@ -1,12 +1,15 @@
-// T4.4 : service des demandes (création, lecture).
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+// T4.4 + T4.5 : service des demandes (création, lecture, réponse du donneur).
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { BloodRequest } from '../database/entities';
-import { RequestStatus, UserRole } from '../database/enums';
+import { canDonateTo } from '../common/rules/blood-compat';
+import { BloodRequest, Donor, RequestResponse } from '../database/entities';
+import { EligibilityStatus, RequestStatus, ResponseType, UserRole } from '../database/enums';
 import { InstitutionsService } from '../institutions/institutions.service';
-import type { CreateRequestDto, RequestDto } from './dto/requests.dto';
+import type { CreateRequestDto, GaugeDto, RequestDto, RespondDto, RespondResultDto } from './dto/requests.dto';
+
+const PG_UNIQUE_VIOLATION = '23505';
 
 @Injectable()
 export class RequestsService {
@@ -15,6 +18,8 @@ export class RequestsService {
 
   constructor(
     @InjectRepository(BloodRequest) private readonly requests: Repository<BloodRequest>,
+    @InjectRepository(RequestResponse) private readonly responses: Repository<RequestResponse>,
+    @InjectRepository(Donor) private readonly donors: Repository<Donor>,
     private readonly institutions: InstitutionsService,
   ) {}
 
@@ -82,5 +87,58 @@ export class RequestsService {
       if (inst.id !== r.institutionId) throw new ForbiddenException("Cette demande n'appartient pas à votre établissement");
     }
     return this.toDto(r);
+  }
+
+  async gauge(requestId: string, needed: number): Promise<GaugeDto> {
+    const accepted = await this.responses.count({ where: { requestId, response: ResponseType.JeViens } });
+    return { accepted, needed, percent: needed > 0 ? Math.min(100, Math.round((accepted / needed) * 100)) : 0 };
+  }
+
+  /**
+   * T4.5 : réponse du donneur. Contrôle serveur, 3ᵉ niveau de F2.4 :
+   * demande active, donneur éligible, compatible, délai entre dons écoulé, une seule réponse par demande.
+   */
+  async respond(requestId: string, dto: RespondDto, user: AuthenticatedUser): Promise<RespondResultDto> {
+    const req = await this.requests.findOne({ where: { id: requestId } });
+    if (!req) throw new NotFoundException('Demande introuvable');
+    const donor = await this.donors.findOne({ where: { userId: user.id } });
+    if (!donor) throw new NotFoundException('Profil donneur introuvable');
+
+    if (req.status !== RequestStatus.Active) throw new ConflictException("Cette demande n'est plus active");
+    if (new Date(req.deadline).getTime() <= this.now().getTime()) throw new ConflictException('Cette demande a expiré');
+    if (await this.responses.findOne({ where: { requestId, donorId: donor.userId } })) {
+      throw new ConflictException('Vous avez déjà répondu à cette demande');
+    }
+
+    const accepting = (dto.response as unknown as string) === (ResponseType.JeViens as string);
+    if (accepting) {
+      if (donor.eligibilityStatus !== EligibilityStatus.Eligible) {
+        throw new ConflictException("Vous n'êtes pas éligible au don à ce jour");
+      }
+      if (!canDonateTo(donor.bloodGroup, req.bloodGroup)) {
+        throw new ConflictException("Votre groupe sanguin n'est pas compatible avec cette demande");
+      }
+      const today = this.now().toISOString().slice(0, 10);
+      if (donor.nextDonationPossibleDate && donor.nextDonationPossibleDate > today) {
+        throw new ConflictException(`Délai entre dons non écoulé : prochain don possible le ${donor.nextDonationPossibleDate}`);
+      }
+    }
+
+    try {
+      await this.responses.save(this.responses.create({ requestId, donorId: donor.userId, response: dto.response as never }));
+    } catch (e) {
+      if ((e as { code?: string }).code === PG_UNIQUE_VIOLATION) {
+        throw new ConflictException('Vous avez déjà répondu à cette demande');
+      }
+      throw e;
+    }
+
+    // T5.4 : publier ici l'événement Redis (gauge, donor_en_route) ; T5.5 : clôture quand le besoin est couvert.
+    return {
+      requestId,
+      response: dto.response as unknown as RespondResultDto['response'],
+      accepted: accepting,
+      gauge: await this.gauge(requestId, req.quantity),
+    };
   }
 }

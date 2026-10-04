@@ -1,6 +1,6 @@
-// T3 : squelette (données mockées, services réels en T4.4, T4.5 et T5.5).
+// T3 : squelette (live reste mocké jusqu'à T5.5).
 // T2.4 : POST /requests exige un établissement validé (F5).
-// AJOUT : T4.4 - create, list et getOne branchés sur RequestsService.
+// AJOUT : T4.4 / T4.5 - create, list, getOne et respond branchés sur RequestsService.
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -126,12 +126,11 @@ export class RequestsController {
     type: ErrorResponseDto,
     description: 'Déjà répondu, demande close, ou donneur non éligible à ce jour',
   })
-  respond(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RespondDto): RespondResultDto {
-    return {
-      requestId: id,
-      response: dto.response,
-      accepted: true,
-      gauge: { accepted: 2, needed: 10, percent: 20 },
-    };
+  respond(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RespondDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<RespondResultDto> {
+    return this.requests.respond(id, dto, user);
   }
 }
