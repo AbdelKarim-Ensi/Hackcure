@@ -53,6 +53,8 @@ export interface Candidate {
   eligibilityStatus: EligibilityStatus;
   lastDonationDate?: string | null;
   distanceKm: number;
+  /** Rayon maximal choisi par le donneur (Donor.maxRadiusKm). */
+  maxRadiusKm?: number;
   availability: Availability;
   alertsReceived: number;
   alertsAccepted: number;
