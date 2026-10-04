@@ -1,5 +1,6 @@
-// T3 : squelette (données mockées, services réels en T4.4, T4.5 et T5.5).
+// T3 : squelette (live reste mocké jusqu'à T5.5).
 // T2.4 : POST /requests exige un établissement validé (F5).
+// AJOUT : T4.4 / T4.5 - create, list, getOne et respond branchés sur RequestsService.
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -18,7 +19,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { BloodGroup, RequestStatus, UrgencyLevel, UserRole } from '../common/enums';
 import { MOCK_IDS, MOCK_NOW } from '../contract/mocks';
-import { InstitutionsService } from '../institutions/institutions.service';
+import { RequestsService } from './requests.service';
 import {
   CreateRequestDto,
   LiveStateDto,
@@ -46,7 +47,7 @@ const mockRequest = (id: string = MOCK_IDS.request): RequestDto => ({
 @ApiTags('requests')
 @Controller('requests')
 export class RequestsController {
-  constructor(private readonly institutions: InstitutionsService) {}
+  constructor(private readonly requests: RequestsService) {}
 
   @Post()
   @ApiRoles(UserRole.HOPITAL)
@@ -57,19 +58,8 @@ export class RequestsController {
   })
   @ApiCreatedResponse({ type: RequestDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
-  async create(@Body() dto: CreateRequestDto, @CurrentUser() user: AuthenticatedUser): Promise<RequestDto> {
-    const inst = await this.institutions.assertHospitalValidated(user.id);
-    return {
-      ...mockRequest(),
-      institutionId: inst.id,
-      institutionName: inst.name,
-      bloodGroup: dto.bloodGroup,
-      quantity: dto.quantity,
-      urgency: dto.urgency,
-      deadline: dto.deadline,
-      initialRadiusKm: dto.initialRadiusKm ?? 10,
-      currentRadiusKm: dto.initialRadiusKm ?? 10,
-    };
+  create(@Body() dto: CreateRequestDto, @CurrentUser() user: AuthenticatedUser): Promise<RequestDto> {
+    return this.requests.create(dto, user);
   }
 
   @Get()
@@ -80,8 +70,8 @@ export class RequestsController {
   })
   @ApiQuery({ name: 'status', enum: RequestStatus, enumName: 'RequestStatus', required: false })
   @ApiOkResponse({ type: [RequestDto] })
-  list(@Query('status') _status?: RequestStatus): RequestDto[] {
-    return [mockRequest()];
+  list(@CurrentUser() user: AuthenticatedUser, @Query('status') status?: RequestStatus): Promise<RequestDto[]> {
+    return this.requests.list(user, status);
   }
 
   @Get(':id')
@@ -90,8 +80,8 @@ export class RequestsController {
   @ApiParam({ name: 'id', example: MOCK_IDS.request })
   @ApiOkResponse({ type: RequestDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  getOne(@Param('id', ParseUUIDPipe) id: string): RequestDto {
-    return mockRequest(id);
+  getOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser): Promise<RequestDto> {
+    return this.requests.getOne(id, user);
   }
 
   @Get(':id/live')
@@ -136,12 +126,11 @@ export class RequestsController {
     type: ErrorResponseDto,
     description: 'Déjà répondu, demande close, ou donneur non éligible à ce jour',
   })
-  respond(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RespondDto): RespondResultDto {
-    return {
-      requestId: id,
-      response: dto.response,
-      accepted: true,
-      gauge: { accepted: 2, needed: 10, percent: 20 },
-    };
+  respond(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RespondDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<RespondResultDto> {
+    return this.requests.respond(id, dto, user);
   }
 }
