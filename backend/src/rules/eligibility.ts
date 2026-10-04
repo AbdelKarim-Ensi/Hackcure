@@ -1,9 +1,9 @@
-import { addDays, addMonths, ageOn, iso, toDate } from './dates.js';
+import { addDays, addMonths, ageOn, iso, toDate } from './dates';
 import {
   EligibilityAnswers,
   EligibilityResult,
   RuleOutcome,
-} from './types.js';
+} from './types';
 
 interface Hit {
   /** Date de réévaluation (null = le donneur doit redéclarer). */

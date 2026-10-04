@@ -1,5 +1,5 @@
-import { COMPATIBILITY } from './config.js';
-import { BloodGroup } from './types.js';
+import { COMPATIBILITY } from './config';
+import { BloodGroup } from './types';
 
 /** Règle déterministe : le groupe du donneur peut-il être donné au groupe demandé ? */
 export function isCompatible(

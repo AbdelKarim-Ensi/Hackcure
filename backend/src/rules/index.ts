@@ -1,7 +1,9 @@
-export * from './types.js';
-export * from './config.js';
-export * from './compatibility.js';
-export * from './interval.js';
-export * from './eligibility.js';
-export * from './scoring.js';
-export { addDays, addMonths, toDate, iso } from './dates.js';
+export * from './types';
+export * from './config';
+export * from './compatibility';
+export * from './interval';
+export * from './eligibility';
+export * from './scoring';
+export * from './waves';
+export * from './adapters';
+export { addDays, addMonths, toDate, iso } from './dates';

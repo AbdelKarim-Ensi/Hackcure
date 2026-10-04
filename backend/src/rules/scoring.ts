@@ -1,6 +1,6 @@
-import { SCORING, WAVES } from './config.js';
-import { isCompatible } from './compatibility.js';
-import { canDonateOn } from './interval.js';
+import { SCORING, WAVES } from './config';
+import { isCompatible } from './compatibility';
+import { canDonateOn } from './interval';
 import {
   BloodRequestInput,
   Candidate,
@@ -8,7 +8,7 @@ import {
   RejectReason,
   ScoreComponents,
   Urgency,
-} from './types.js';
+} from './types';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const round1 = (x: number) => Math.round(x * 10) / 10;
@@ -29,7 +29,7 @@ export function filterCandidates(
     if (!isCompatible(c.bloodGroup, request.bloodGroup, request.exactMatchOnly)) reason = 'incompatible';
     else if (c.eligibilityStatus !== 'eligible') reason = 'non_eligible';
     else if (!canDonateOn(c.lastDonationDate, now, type, c.sex)) reason = 'delai_entre_dons';
-    else if (c.distanceKm > radiusKm) reason = 'hors_rayon';
+    else if (c.distanceKm > Math.min(radiusKm, c.maxRadiusKm ?? Infinity)) reason = 'hors_rayon';
     else if (c.alreadyAlertedForRequest) reason = 'deja_alerte';
     else if ((c.urgentAlertsThisWeek ?? 0) >= WAVES.maxUrgentAlertsPerWeek) reason = 'quota_hebdo';
 
@@ -125,8 +125,12 @@ export function selectWave(
 }
 
 /** Rayon de la vague k (k = 0 pour la première) : min(R_max, R0 + k × Δ). */
-export function radiusForWave(waveIndex: number, r0: number = WAVES.radiusKm.r0Default): number {
-  return Math.min(WAVES.radiusKm.rMax, r0 + waveIndex * WAVES.radiusKm.delta);
+export function radiusForWave(
+  waveIndex: number,
+  r0: number = WAVES.radiusKm.r0Default,
+  rMax: number = WAVES.radiusKm.rMax,
+): number {
+  return Math.min(rMax, r0 + waveIndex * WAVES.radiusKm.delta);
 }
 
 /** Délai avant de lancer la vague suivante si la couverture est insuffisante. */

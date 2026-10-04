@@ -1,6 +1,6 @@
-import { MIN_INTERVAL_DAYS } from './config.js';
-import { addDays, toDate } from './dates.js';
-import { DonationType, Sex } from './types.js';
+import { MIN_INTERVAL_DAYS } from './config';
+import { addDays, toDate } from './dates';
+import { DonationType, Sex } from './types';
 
 /** Si le sexe est inconnu, on applique le délai le plus long (prudence). */
 export function minIntervalDays(type: DonationType, sex?: Sex): number {
