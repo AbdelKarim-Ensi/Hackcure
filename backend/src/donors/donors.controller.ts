@@ -1,7 +1,8 @@
-// AJOUT : T3 - squelette du contrôleur donors (données mockées, services réels en T4.1 à T4.3)
+// T4.1 : register, GET/PATCH me réels (DonorsService). T3 : eligibility-form et next-donation-date restent mockés (T4.2, T4.3).
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -9,10 +10,11 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
-import { BloodGroup, EligibilityStatus, UserRole } from '../common/enums';
-import { MOCK_DONOR_POSITION, MOCK_IDS, MOCK_NOW } from '../contract/mocks';
+import { EligibilityStatus, UserRole } from '../common/enums';
 import {
   DonorProfileDto,
   DonorRegisterDto,
@@ -21,27 +23,13 @@ import {
   NextDonationDateDto,
   UpdateDonorDto,
 } from './dto/donors.dto';
-
-const mockProfile = (): DonorProfileDto => ({
-  userId: MOCK_IDS.donorUser,
-  fullName: 'Amine Ben Salah',
-  phone: '+21612345678',
-  bloodGroup: BloodGroup.A_POS,
-  bloodGroupConfirmed: false,
-  zone: 'Tunis',
-  position: MOCK_DONOR_POSITION,
-  available: true,
-  eligibilityStatus: EligibilityStatus.ELIGIBLE,
-  lastDonationDate: '2026-06-12',
-  nextDonationPossibleDate: '2026-09-10',
-  maxRadiusKm: 20,
-  notifPrefs: { alertsEnabled: true, quietHours: { start: '22:00', end: '07:00' } },
-  consentAt: MOCK_NOW,
-});
+import { DonorsService } from './donors.service';
 
 @ApiTags('donors')
 @Controller('donors')
 export class DonorsController {
+  constructor(private readonly donors: DonorsService) {}
+
   @Post('register')
   @ApiRoles(UserRole.DONNEUR)
   @ApiOperation({
@@ -51,16 +39,18 @@ export class DonorsController {
   })
   @ApiCreatedResponse({ type: DonorProfileDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Consentement manquant ou données invalides' })
-  register(@Body() _dto: DonorRegisterDto): DonorProfileDto {
-    return { ...mockProfile(), eligibilityStatus: EligibilityStatus.EN_ATTENTE };
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Profil donneur déjà créé pour ce compte' })
+  register(@Body() dto: DonorRegisterDto, @CurrentUser() user: AuthenticatedUser): Promise<DonorProfileDto> {
+    return this.donors.register(user.id, dto);
   }
 
   @Get('me')
   @ApiRoles(UserRole.DONNEUR)
   @ApiOperation({ summary: 'Mon profil donneur' })
   @ApiOkResponse({ type: DonorProfileDto })
-  getMe(): DonorProfileDto {
-    return mockProfile();
+  @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'Profil non créé (appeler POST /donors/register)' })
+  getMe(@CurrentUser() user: AuthenticatedUser): Promise<DonorProfileDto> {
+    return this.donors.getMe(user.id);
   }
 
   @Patch('me')
@@ -70,8 +60,9 @@ export class DonorsController {
     description: "Disponibilité, zone, position (action explicite), rayon maximal, alertes et plage de silence.",
   })
   @ApiOkResponse({ type: DonorProfileDto })
-  updateMe(@Body() _dto: UpdateDonorDto): DonorProfileDto {
-    return mockProfile();
+  @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'Profil non créé (appeler POST /donors/register)' })
+  updateMe(@Body() dto: UpdateDonorDto, @CurrentUser() user: AuthenticatedUser): Promise<DonorProfileDto> {
+    return this.donors.updateMe(user.id, dto);
   }
 
   @Post(':id/eligibility-form')
