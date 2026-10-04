@@ -317,6 +317,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Profil donneur déjà créé pour ce compte",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -360,6 +370,16 @@
           },
           "403": {
             "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profil non créé (appeler POST /donors/register)",
             "content": {
               "application/json": {
                 "schema": {
@@ -426,6 +446,16 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Profil non créé (appeler POST /donors/register)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -479,7 +509,7 @@
             }
           },
           "400": {
-            "description": "",
+            "description": "Consentement manquant ou réponses invalides",
             "content": {
               "application/json": {
                 "schema": {
@@ -499,7 +529,27 @@
             }
           },
           "403": {
-            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "description": "Un donneur ne remplit que son propre formulaire\n\nRôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profil non créé (appeler POST /donors/register)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Statut définitif : formulaire non re-soumettable",
             "content": {
               "application/json": {
                 "schema": {
@@ -525,6 +575,7 @@
     },
     "/donors/{id}/next-donation-date": {
       "get": {
+        "description": "Un donneur consulte uniquement son propre dossier (403 sinon). canDonateNow vaut false tant que le donneur n'est pas eligible (en_attente, temporaire, definitif) ou que le délai entre dons n'est pas écoulé.",
         "operationId": "DonorsController_nextDonationDate",
         "parameters": [
           {
@@ -559,7 +610,7 @@
             }
           },
           "403": {
-            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt",
+            "description": "Un donneur ne peut pas consulter le dossier d'un autre\n\nRôle insuffisant. Rôles autorisés : donneur, hopital, crt",
             "content": {
               "application/json": {
                 "schema": {
@@ -590,6 +641,88 @@
         ],
         "x-roles": [
           "donneur",
+          "hopital",
+          "crt"
+        ]
+      }
+    },
+    "/donations/confirm": {
+      "post": {
+        "description": "Enregistre le don, met à jour la date du dernier don et recalcule la date du prochain don possible (F2.1, F2.2). Date par défaut : aujourd'hui, jamais dans le futur.",
+        "operationId": "DonationsController_confirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmDonationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DonationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Date du don invalide ou dans le futur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital, crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Donneur introuvable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmer un don",
+        "tags": [
+          "donations"
+        ],
+        "x-roles": [
           "hopital",
           "crt"
         ]
@@ -1647,78 +1780,6 @@
         ]
       }
     },
-    "/donations/confirm": {
-      "post": {
-        "description": "Enregistre le don, met à jour la date du dernier don et recalcule la date du prochain don possible (F2.1, F2.2).",
-        "operationId": "DonationsController_confirm",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfirmDonationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DonationDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token absent, invalide ou expiré",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rôle insuffisant. Rôles autorisés : hopital, crt",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Confirmer un don",
-        "tags": [
-          "donations"
-        ],
-        "x-roles": [
-          "hopital",
-          "crt"
-        ]
-      }
-    },
     "/stocks": {
       "get": {
         "description": "Alimente la carte des stocks (rouge, orange, vert). Un hôpital ne voit que son établissement, la direction voit tout.",
@@ -2530,6 +2591,115 @@
           "message"
         ]
       },
+      "DonationType": {
+        "type": "string",
+        "enum": [
+          "sang_total",
+          "plaquettes",
+          "plasma"
+        ]
+      },
+      "DonationSource": {
+        "type": "string",
+        "enum": [
+          "urgence",
+          "evenement"
+        ]
+      },
+      "ConfirmDonationDto": {
+        "type": "object",
+        "properties": {
+          "donorId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61",
+            "description": "userId du donneur"
+          },
+          "type": {
+            "example": "sang_total",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationType"
+              }
+            ]
+          },
+          "source": {
+            "example": "urgence",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationSource"
+              }
+            ]
+          },
+          "donatedAt": {
+            "type": "string",
+            "example": "2026-10-03",
+            "description": "Date du don, aujourd'hui par défaut"
+          },
+          "place": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          }
+        },
+        "required": [
+          "donorId",
+          "type",
+          "source"
+        ]
+      },
+      "DonationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "e5f6a7b8-0001-4eee-8fff-000000000001"
+          },
+          "donorId": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationType"
+              }
+            ]
+          },
+          "donatedAt": {
+            "type": "string",
+            "example": "2026-10-03"
+          },
+          "place": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "source": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DonationSource"
+              }
+            ]
+          },
+          "confirmedBy": {
+            "type": "string",
+            "example": "7b9e2c10-44aa-4f3b-8d21-0a1b2c3d4e52",
+            "description": "Membre du personnel ayant confirmé"
+          },
+          "nextDonationPossibleDate": {
+            "type": "string",
+            "example": "2027-01-03",
+            "description": "Prochain don possible, recalculé automatiquement"
+          }
+        },
+        "required": [
+          "id",
+          "donorId",
+          "type",
+          "donatedAt",
+          "source",
+          "confirmedBy",
+          "nextDonationPossibleDate"
+        ]
+      },
       "InstitutionType": {
         "type": "string",
         "enum": [
@@ -3194,14 +3364,6 @@
           "status"
         ]
       },
-      "DonationType": {
-        "type": "string",
-        "enum": [
-          "sang_total",
-          "plaquettes",
-          "plasma"
-        ]
-      },
       "CheckinDto": {
         "type": "object",
         "properties": {
@@ -3306,107 +3468,6 @@
           "absent",
           "donations",
           "byBloodGroup"
-        ]
-      },
-      "DonationSource": {
-        "type": "string",
-        "enum": [
-          "urgence",
-          "evenement"
-        ]
-      },
-      "ConfirmDonationDto": {
-        "type": "object",
-        "properties": {
-          "donorId": {
-            "type": "string",
-            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61",
-            "description": "userId du donneur"
-          },
-          "type": {
-            "example": "sang_total",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DonationType"
-              }
-            ]
-          },
-          "source": {
-            "example": "urgence",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DonationSource"
-              }
-            ]
-          },
-          "donatedAt": {
-            "type": "string",
-            "example": "2026-10-03",
-            "description": "Date du don, aujourd'hui par défaut"
-          },
-          "place": {
-            "type": "string",
-            "example": "Hôpital Charles Nicolle"
-          }
-        },
-        "required": [
-          "donorId",
-          "type",
-          "source"
-        ]
-      },
-      "DonationDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "e5f6a7b8-0001-4eee-8fff-000000000001"
-          },
-          "donorId": {
-            "type": "string",
-            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
-          },
-          "type": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DonationType"
-              }
-            ]
-          },
-          "donatedAt": {
-            "type": "string",
-            "example": "2026-10-03"
-          },
-          "place": {
-            "type": "string",
-            "example": "Hôpital Charles Nicolle"
-          },
-          "source": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DonationSource"
-              }
-            ]
-          },
-          "confirmedBy": {
-            "type": "string",
-            "example": "7b9e2c10-44aa-4f3b-8d21-0a1b2c3d4e52",
-            "description": "Membre du personnel ayant confirmé"
-          },
-          "nextDonationPossibleDate": {
-            "type": "string",
-            "example": "2027-01-03",
-            "description": "Prochain don possible, recalculé automatiquement"
-          }
-        },
-        "required": [
-          "id",
-          "donorId",
-          "type",
-          "donatedAt",
-          "source",
-          "confirmedBy",
-          "nextDonationPossibleDate"
         ]
       },
       "StockLevel": {
