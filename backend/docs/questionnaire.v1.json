@@ -1,0 +1,216 @@
+{
+  "version": 1,
+  "intro": {
+    "fr": "Ces questions permettent de vérifier que le don est sans risque pour vous et pour le patient. Vos réponses sont confidentielles et ne sont vues que par le personnel médical autorisé. La décision finale est prise par l'équipe médicale le jour du don.",
+    "ar": "تساعدنا هذه الأسئلة على التأكد من أن التبرع آمن لك وللمريض. إجاباتك سرية ولا يطّلع عليها إلا الطاقم الطبي المخوَّل. ويتخذ الفريق الطبي القرار النهائي يوم التبرع."
+  },
+  "sensitiveNotice": {
+    "fr": "Question confidentielle. Répondez avec sincérité : cela protège les patients.",
+    "ar": "سؤال سرّي. أجب بصدق، فذلك يحمي المرضى."
+  },
+  "labels": {
+    "yes": {
+      "fr": "Oui",
+      "ar": "نعم"
+    },
+    "no": {
+      "fr": "Non",
+      "ar": "لا"
+    },
+    "none": {
+      "fr": "Non concerné",
+      "ar": "غير معني"
+    }
+  },
+  "questions": [
+    {
+      "id": "E01",
+      "field": "birthDate",
+      "type": "date",
+      "required": true,
+      "label": {
+        "fr": "Quelle est votre date de naissance ?",
+        "ar": "ما هو تاريخ ميلادك؟"
+      }
+    },
+    {
+      "id": "E02",
+      "field": "weightKg",
+      "type": "number",
+      "required": true,
+      "min": 30,
+      "max": 250,
+      "unit": {
+        "fr": "kg",
+        "ar": "كغ"
+      },
+      "label": {
+        "fr": "Quel est votre poids ?",
+        "ar": "ما هو وزنك؟"
+      },
+      "help": {
+        "fr": "Un poids minimum est exigé pour donner son sang.",
+        "ar": "يُشترط حدّ أدنى للوزن للتبرع بالدم."
+      }
+    },
+    {
+      "id": "E04",
+      "field": "feverInfectionRecent",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Avez-vous eu de la fièvre ou une infection ces dernières semaines ?",
+        "ar": "هل أُصبت بحمّى أو عدوى خلال الأسابيع الأخيرة؟"
+      }
+    },
+    {
+      "id": "E04b",
+      "field": "feverRecoveryDate",
+      "type": "date",
+      "required": false,
+      "showIf": {
+        "field": "feverInfectionRecent",
+        "equals": true
+      },
+      "label": {
+        "fr": "À quelle date avez-vous guéri ?",
+        "ar": "في أي تاريخ شُفيت؟"
+      },
+      "help": {
+        "fr": "Laissez vide si vous êtes encore malade.",
+        "ar": "اترك الحقل فارغًا إذا كنت ما زلت مريضًا."
+      }
+    },
+    {
+      "id": "E05",
+      "field": "antibioticsEndDate",
+      "type": "date_or_none",
+      "required": false,
+      "allowFuture": true,
+      "label": {
+        "fr": "Prenez-vous ou avez-vous récemment pris des antibiotiques ? Indiquez la date de fin du traitement.",
+        "ar": "هل تتناول مضادات حيوية أو تناولتها مؤخرًا؟ أدخل تاريخ انتهاء العلاج."
+      }
+    },
+    {
+      "id": "E06",
+      "field": "tattooPiercingDate",
+      "type": "date_or_none",
+      "required": false,
+      "label": {
+        "fr": "Avez-vous fait un tatouage, un piercing ou de l'acupuncture récemment ? Indiquez la date.",
+        "ar": "هل قمت بوشم أو ثقب في الجسم أو وخز بالإبر مؤخرًا؟ أدخل التاريخ."
+      }
+    },
+    {
+      "id": "E07",
+      "field": "surgeryDate",
+      "type": "date_or_none",
+      "required": false,
+      "label": {
+        "fr": "Avez-vous subi une opération chirurgicale ou une endoscopie récemment ? Indiquez la date.",
+        "ar": "هل خضعت لعملية جراحية أو تنظير داخلي مؤخرًا؟ أدخل التاريخ."
+      }
+    },
+    {
+      "id": "E08",
+      "field": "transfusionReceivedDate",
+      "type": "date_or_none",
+      "required": false,
+      "label": {
+        "fr": "Avez-vous reçu une transfusion sanguine ? Indiquez la date.",
+        "ar": "هل تلقيت عملية نقل دم؟ أدخل التاريخ."
+      }
+    },
+    {
+      "id": "E09",
+      "field": "pregnant",
+      "type": "boolean",
+      "required": true,
+      "showIfProfile": {
+        "field": "sex",
+        "equals": "femme"
+      },
+      "label": {
+        "fr": "Êtes-vous enceinte actuellement ?",
+        "ar": "هل أنتِ حامل حاليًا؟"
+      }
+    },
+    {
+      "id": "E09b",
+      "field": "deliveryDate",
+      "type": "date_or_none",
+      "required": false,
+      "showIfProfile": {
+        "field": "sex",
+        "equals": "femme"
+      },
+      "label": {
+        "fr": "Avez-vous accouché récemment ? Indiquez la date de naissance du bébé.",
+        "ar": "هل وضعتِ مولودًا مؤخرًا؟ أدخلي تاريخ الولادة."
+      }
+    },
+    {
+      "id": "E10",
+      "field": "vaccinationDate",
+      "type": "date_or_none",
+      "required": false,
+      "label": {
+        "fr": "Avez-vous reçu un vaccin récemment ? Indiquez la date.",
+        "ar": "هل تلقيت لقاحًا مؤخرًا؟ أدخل التاريخ."
+      }
+    },
+    {
+      "id": "E11",
+      "field": "malariaZoneReturnDate",
+      "type": "date_or_none",
+      "required": false,
+      "label": {
+        "fr": "Avez-vous séjourné dans une zone à risque de paludisme ? Indiquez votre date de retour.",
+        "ar": "هل أقمت في منطقة موبوءة بالملاريا؟ أدخل تاريخ عودتك."
+      }
+    },
+    {
+      "id": "E12",
+      "field": "infectiousHistory",
+      "type": "boolean",
+      "required": true,
+      "sensitive": true,
+      "label": {
+        "fr": "Avez-vous déjà eu le VIH (sida), une hépatite B ou C, ou une infection par le virus HTLV ?",
+        "ar": "هل سبق أن أُصبت بفيروس نقص المناعة البشرية (السيدا) أو التهاب الكبد الفيروسي «ب» أو «ج» أو عدوى فيروس HTLV؟"
+      }
+    },
+    {
+      "id": "E13",
+      "field": "injectedDrugUseEver",
+      "type": "boolean",
+      "required": true,
+      "sensitive": true,
+      "label": {
+        "fr": "Avez-vous déjà consommé des drogues par injection ?",
+        "ar": "هل سبق أن تعاطيت مخدرات عن طريق الحقن؟"
+      }
+    },
+    {
+      "id": "E14",
+      "field": "chronicDisease",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Souffrez-vous d'une maladie chronique (maladie cardiaque, épilepsie, diabète sous insuline, cancer, trouble de la coagulation) ?",
+        "ar": "هل تعاني من مرض مزمن (مثل أمراض القلب أو الصرع أو السكري المعتمد على الأنسولين أو السرطان أو اضطرابات التخثر)؟"
+      }
+    },
+    {
+      "id": "E15",
+      "field": "regularMedication",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Prenez-vous des médicaments de façon régulière ?",
+        "ar": "هل تتناول أدوية بشكل منتظم؟"
+      }
+    }
+  ]
+}
