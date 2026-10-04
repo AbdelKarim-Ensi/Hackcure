@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.donorapp"
+    namespace "com.hackcure.blooddonor"
     defaultConfig {
-        applicationId "com.donorapp"
+        applicationId "com.hackcure.blooddonor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
