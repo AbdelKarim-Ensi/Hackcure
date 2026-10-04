@@ -1,9 +1,11 @@
-// T4.1 : register, GET/PATCH me réels (DonorsService). T3 : eligibility-form et next-donation-date restent mockés (T4.2, T4.3).
+// T4.1 : register, GET/PATCH me réels (DonorsService). T4.3 : next-donation-date réel (DonationsService).
+// T3 : eligibility-form reste mocké (T4.2).
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -15,6 +17,7 @@ import { ApiRoles } from '../common/decorators/api-roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { EligibilityStatus, UserRole } from '../common/enums';
+import { DonationsService } from '../donations/donations.service';
 import {
   DonorProfileDto,
   DonorRegisterDto,
@@ -28,7 +31,10 @@ import { DonorsService } from './donors.service';
 @ApiTags('donors')
 @Controller('donors')
 export class DonorsController {
-  constructor(private readonly donors: DonorsService) {}
+  constructor(
+    private readonly donors: DonorsService,
+    private readonly donations: DonationsService,
+  ) {}
 
   @Post('register')
   @ApiRoles(UserRole.DONNEUR)
@@ -89,15 +95,19 @@ export class DonorsController {
 
   @Get(':id/next-donation-date')
   @ApiRoles(UserRole.DONNEUR, UserRole.HOPITAL, UserRole.CRT)
-  @ApiOperation({ summary: 'Date du prochain don possible' })
+  @ApiOperation({
+    summary: 'Date du prochain don possible',
+    description:
+      "Un donneur consulte uniquement son propre dossier (403 sinon). canDonateNow vaut false tant que le donneur n'est pas eligible (en_attente, temporaire, definitif) ou que le délai entre dons n'est pas écoulé.",
+  })
   @ApiParam({ name: 'id', description: 'userId du donneur' })
   @ApiOkResponse({ type: NextDonationDateDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: "Un donneur ne peut pas consulter le dossier d'un autre" })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  nextDonationDate(@Param('id', ParseUUIDPipe) _id: string): NextDonationDateDto {
-    return {
-      nextDonationPossibleDate: '2026-09-10',
-      canDonateNow: true,
-      message: 'Vous pouvez donner dès maintenant',
-    };
+  nextDonationDate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<NextDonationDateDto> {
+    return this.donations.nextDonationDate(user, id);
   }
 }

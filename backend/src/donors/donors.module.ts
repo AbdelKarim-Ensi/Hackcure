@@ -1,12 +1,13 @@
-// T4.1 : module donors branché sur la base (Donor, User) ; exporte le service pour T4.2, T4.3 et T5.
+// T4.1 : module donors branché sur la base (Donor, User). T4.3 : importe DonationsModule pour next-donation-date.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Donor, User } from '../database/entities';
+import { DonationsModule } from '../donations/donations.module';
 import { DonorsController } from './donors.controller';
 import { DonorsService } from './donors.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Donor, User])],
+  imports: [TypeOrmModule.forFeature([Donor, User]), DonationsModule],
   controllers: [DonorsController],
   providers: [DonorsService],
   exports: [DonorsService],
