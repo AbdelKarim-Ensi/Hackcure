@@ -8,6 +8,7 @@ import { BloodRequest, Donor, RequestResponse } from '../database/entities';
 import { EligibilityStatus, RequestStatus, ResponseType, UserRole } from '../database/enums';
 import { InstitutionsService } from '../institutions/institutions.service';
 import { WavesService } from '../waves/waves.service';
+import { LiveEventsService } from '../live/live-events.service'; // AJOUT T5.4
 import type { CreateRequestDto, GaugeDto, RequestDto, RespondDto, RespondResultDto } from './dto/requests.dto';
 
 const PG_UNIQUE_VIOLATION = '23505';
@@ -24,6 +25,8 @@ export class RequestsService {
     @InjectRepository(Donor) private readonly donors: Repository<Donor>,
     private readonly institutions: InstitutionsService,
     @Optional() private readonly waves?: WavesService,
+    // AJOUT T5.4 : publication Redis des événements temps réel (optionnel : les tests existants n'ont pas à le fournir).
+    @Optional() private readonly live?: LiveEventsService,
   ) {}
 
   toDto(r: BloodRequest): RequestDto {
@@ -141,12 +144,19 @@ export class RequestsService {
       throw e;
     }
 
-    // T5.4 : publier ici l'événement Redis (gauge, donor_en_route) ; T5.5 : clôture quand le besoin est couvert.
+    // AJOUT T5.4 : une réponse « Je viens » publie la jauge et donor_en_route (best-effort : un Redis en panne ne casse pas la réponse).
+    const gauge = await this.gauge(requestId, req.quantity);
+    if (accepting && this.live) {
+      void this.live
+        .publishAccepted(requestId, gauge)
+        .catch((e: Error) => this.logger.warn(`Événement temps réel non publié pour ${requestId} : ${e.message}`));
+    }
+    // T5.5 : clôture quand le besoin est couvert.
     return {
       requestId,
       response: dto.response as unknown as RespondResultDto['response'],
       accepted: accepting,
-      gauge: await this.gauge(requestId, req.quantity),
+      gauge,
     };
   }
 }
