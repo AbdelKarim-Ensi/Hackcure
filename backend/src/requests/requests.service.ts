@@ -1,5 +1,5 @@
 // T4.4 + T4.5 : service des demandes (création, lecture, réponse du donneur).
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
@@ -7,6 +7,7 @@ import { canDonateTo } from '../common/rules/blood-compat';
 import { BloodRequest, Donor, RequestResponse } from '../database/entities';
 import { EligibilityStatus, RequestStatus, ResponseType, UserRole } from '../database/enums';
 import { InstitutionsService } from '../institutions/institutions.service';
+import { WavesService } from '../waves/waves.service';
 import type { CreateRequestDto, GaugeDto, RequestDto, RespondDto, RespondResultDto } from './dto/requests.dto';
 
 const PG_UNIQUE_VIOLATION = '23505';
@@ -15,12 +16,14 @@ const PG_UNIQUE_VIOLATION = '23505';
 export class RequestsService {
   /** Horloge injectable pour les tests. */
   now: () => Date = () => new Date();
+  private readonly logger = new Logger(RequestsService.name);
 
   constructor(
     @InjectRepository(BloodRequest) private readonly requests: Repository<BloodRequest>,
     @InjectRepository(RequestResponse) private readonly responses: Repository<RequestResponse>,
     @InjectRepository(Donor) private readonly donors: Repository<Donor>,
     private readonly institutions: InstitutionsService,
+    @Optional() private readonly waves?: WavesService,
   ) {}
 
   toDto(r: BloodRequest): RequestDto {
@@ -63,7 +66,12 @@ export class RequestsService {
         status: RequestStatus.Active,
       }),
     );
-    // T5.1 : démarrer la vague 1 ici (WavesService) pour les demandes actives.
+    // T5.1 : vague 1 en arrière-plan, la réponse à l'hôpital n'attend pas les envois.
+    if (saved.status === RequestStatus.Active && this.waves) {
+      void this.waves
+        .runWave(saved.id)
+        .catch((e: Error) => this.logger.error(`Vague 1 échouée pour ${saved.id} : ${e.message}`));
+    }
     saved.institution = inst;
     return this.toDto(saved);
   }

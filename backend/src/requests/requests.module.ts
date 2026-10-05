@@ -1,3 +1,4 @@
+import { WavesModule } from '../waves/waves.module';
 // AJOUT : T4.4 / T4.5 - entités et RequestsService
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -7,7 +8,7 @@ import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 
 @Module({
-  imports: [InstitutionsModule, TypeOrmModule.forFeature([BloodRequest, RequestResponse, Donor])],
+  imports: [WavesModule, InstitutionsModule, TypeOrmModule.forFeature([BloodRequest, RequestResponse, Donor])],
   controllers: [RequestsController],
   providers: [RequestsService],
   exports: [RequestsService],
