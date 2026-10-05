@@ -5,6 +5,10 @@ import { AppModule } from './app.module';
 // AJOUT : T3 - validation globale et Swagger
 import { ValidationPipe } from '@nestjs/common';
 import { setupSwagger } from './swagger';
+// AJOUT T5.3 : adaptateur Socket.IO sur Redis
+import type Redis from 'ioredis';
+import { RedisIoAdapter } from './live/redis-io.adapter';
+import { REDIS } from './redis/redis.module';
 
 async function bootstrap() {
   // AJOUT : T3 - option instrument désactivée tant que @nestjs/observe n'est pas branché dans app.module
@@ -18,6 +22,10 @@ async function bootstrap() {
   app.enableCors({ origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true });
   // AJOUT : T3 - Swagger UI sur /docs, JSON sur /docs/json
   setupSwagger(app);
+  // AJOUT T5.3 : WebSocket /live avec adaptateur Redis (doit être posé avant listen)
+  const ioAdapter = new RedisIoAdapter(app);
+  ioAdapter.connectToRedis(app.get<Redis>(REDIS));
+  app.useWebSocketAdapter(ioAdapter);
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

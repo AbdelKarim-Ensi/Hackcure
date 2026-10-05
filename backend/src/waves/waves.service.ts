@@ -15,6 +15,8 @@ import { toRulesUrgency } from '../rules';
 import { waveTimeoutMinutes } from '../rules/scoring';
 import { RELEASE_LOCK_LUA, WAVE_CHECK_MARGIN_MS, WAVE_LOCK_TTL_MS, waveLockKey } from './waves.constants';
 import { WavesQueue } from './waves.queue';
+import { Optional } from '@nestjs/common'; // AJOUT T5.3
+import { LiveEventsService } from '../live/live-events.service'; // AJOUT T5.3
 
 export interface WaveRunResult {
   requestId: string;
@@ -51,6 +53,8 @@ export class WavesService {
     @Inject(REDIS) private readonly redis: Redis,
     private readonly queue: WavesQueue,
     config: ConfigService,
+    // AJOUT T5.3 : wave_started pour le dashboard (optionnel : ne casse pas les specs existantes)
+    @Optional() private readonly live?: LiveEventsService,
   ) {
     const seconds = Number(config.get<string>('WAVE_DELAY_SECONDS'));
     this.demoDelayMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
@@ -117,6 +121,8 @@ export class WavesService {
     // 1. Trace de la vague, y compris à 0 destinataire : le planificateur peut alors élargir le rayon.
     await this.waves.save(this.waves.create({ requestId, waveNumber, radiusKm, sentTo: plan.donorIds.length }));
     await this.requests.update(requestId, { currentRadiusKm: radiusKm });
+    // AJOUT T5.3 : le dashboard voit démarrer la vague tout de suite (best-effort, jamais bloquant)
+    void this.live?.publish({ type: 'wave_started', requestId, waveNumber, radiusKm, at: new Date().toISOString() });
 
     // 2. Alertes. Payload en liste blanche (R4) : aucune identité de patient.
     const byDonor = new Map(plan.ranked.map((r) => [r.donorId, r]));
