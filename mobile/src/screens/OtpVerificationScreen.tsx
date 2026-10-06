@@ -7,8 +7,8 @@ export default function OtpVerificationScreen({ route, navigation }: any) {
     const { donorData } = route.params || {};
 
     const handleVerify = () => {
-        // En démo : n'importe quel code à 4 chiffres (ex: 1234) valide l'étape
-        if (code.length === 4) {
+        // En démo : n'importe quel code à 6 chiffres (ex: 123456) valide l'étape
+        if (code.length === 6) {
             Alert.alert('Succès', 'Numéro de téléphone vérifié !', [
                 {
                     text: 'Questionnaire d\'éligibilité',
@@ -16,7 +16,7 @@ export default function OtpVerificationScreen({ route, navigation }: any) {
                 },
             ]);
         } else {
-            Alert.alert('Erreur', 'Veuillez entrer un code à 4 chiffres (ex: 1234)');
+            Alert.alert('Erreur', 'Veuillez entrer un code à 6 chiffres (ex: 123456)');
         }
     };
 
@@ -24,14 +24,14 @@ export default function OtpVerificationScreen({ route, navigation }: any) {
         <View style={styles.container}>
             <Text style={styles.title}>Vérification du numéro</Text>
             <Text style={styles.subtitle}>
-                Saisissez le code de confirmation (Code démo : 1234)
+                Saisissez le code de confirmation (Code démo : 123456)
             </Text>
 
             <TextInput
                 style={styles.otpInput}
                 keyboardType="number-pad"
-                maxLength={4}
-                placeholder="1234"
+                maxLength={6}
+                placeholder="123456"
                 value={code}
                 onChangeText={setCode}
             />

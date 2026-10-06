@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 // Importation de vos écrans
 import AuthScreen from './src/screens/AuthScreen';
 import OtpVerificationScreen from './src/screens/OtpVerificationScreen';
+import { EligibilityScreen } from './src/screens/EligibilityScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +24,7 @@ export default function App(): React.JSX.Element {
         >
           <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+          <Stack.Screen name="Eligibility" component={EligibilityScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
