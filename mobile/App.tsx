@@ -1,22 +1,30 @@
 import React from 'react';
-import { StatusBar, StyleSheet } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+// Importation de vos écrans
 import AuthScreen from './src/screens/AuthScreen';
+import OtpVerificationScreen from './src/screens/OtpVerificationScreen';
+
+const Stack = createNativeStackNavigator();
 
 export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" />
-        <AuthScreen />
-      </SafeAreaView>
+      <StatusBar barStyle="dark-content" />
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Auth"
+          screenOptions={{
+            headerShown: false, // Masque la barre d'en-tête native pour garder votre propre style
+          }}
+        >
+          <Stack.Screen name="Auth" component={AuthScreen} />
+          <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-});

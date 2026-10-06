@@ -9,6 +9,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ImageBackground,
+    Alert, // <-- Ajout de Alert pour le retour visuel
 } from 'react-native';
 
 type BloodGroup = 'A' | 'B' | 'AB' | 'O';
@@ -33,13 +34,14 @@ const BloodBagIllustration = ({ bloodType }: { bloodType: string }) => {
     );
 };
 
-export default function AuthScreen() {
+export default function AuthScreen({ navigation }: any) {
     const [isLogin, setIsLogin] = useState(false);
 
     // Form states
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
+    const [phone, setPhone] = useState(''); // <-- Ajouté pour F1.1 (OTP)
 
     // États du groupe sanguin
     const [selectedGroup, setSelectedGroup] = useState<BloodGroup>('B');
@@ -52,14 +54,51 @@ export default function AuthScreen() {
 
     const handleSubmit = () => {
         if (isLogin) {
-            console.log('Connexion Damm :', { email, password });
+            // --- Traitement Connexion ---
+            if (!email.trim() || !password.trim()) {
+                Alert.alert('Champs incomplets', 'Veuillez saisir votre email et votre mot de passe.');
+                return;
+            }
+
+            Alert.alert('Connexion réussie', `Bienvenue sur Damm !`, [
+                {
+                    text: 'Continuer',
+                    onPress: () => navigation?.navigate('Home'), // ou votre écran d'accueil
+                },
+            ]);
         } else {
-            console.log('Inscription Damm :', {
+            // --- Traitement Inscription (F1.1) ---
+            if (!fullName.trim() || !phone.trim() || !email.trim() || !password.trim()) {
+                Alert.alert('Champs requis', 'Veuillez remplir tous les champs obligatoires.');
+                return;
+            }
+
+            const payload = {
                 fullName,
+                phone,
                 email,
                 password,
                 bloodType: bloodTypeToSubmit,
-            });
+            };
+
+            console.log('Données inscription envoyées :', payload);
+
+            // Simulation envoi OTP (Prochaine étape F1.1 -> OTP)
+            Alert.alert(
+                'Code OTP envoyé !',
+                `Un code de vérification SMS a été envoyé au ${phone}.`,
+                [
+                    {
+                        text: 'Saisir le code OTP',
+                        onPress: () => {
+                            // Redirection vers l'écran d'OTP ou questionnaire d'éligibilité F1.2
+                            if (navigation) {
+                                navigation.navigate('OtpVerification', { donorData: payload });
+                            }
+                        },
+                    },
+                ]
+            );
         }
     };
 
@@ -112,13 +151,26 @@ export default function AuthScreen() {
                         {!isLogin && (
                             <>
                                 <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>Nom complet</Text>
+                                    <Text style={styles.label}>Nom complet *</Text>
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Ex: Myriam Ben Ali"
                                         placeholderTextColor="#888"
                                         value={fullName}
                                         onChangeText={setFullName}
+                                    />
+                                </View>
+
+                                {/* Champ Téléphone (Requis par F1.1 pour OTP) */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Numéro de téléphone (OTP) *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Ex: +216 20 123 456"
+                                        placeholderTextColor="#888"
+                                        keyboardType="phone-pad"
+                                        value={phone}
+                                        onChangeText={setPhone}
                                     />
                                 </View>
 
@@ -209,7 +261,7 @@ export default function AuthScreen() {
 
                         {/* Champs Email & Mot de passe */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Adresse Email</Text>
+                            <Text style={styles.label}>Adresse Email *</Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="exemple@mail.com"
@@ -222,7 +274,7 @@ export default function AuthScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Mot de passe</Text>
+                            <Text style={styles.label}>Mot de passe *</Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="••••••••"
@@ -252,247 +304,47 @@ export default function AuthScreen() {
     );
 }
 
-// Styles de l'illustration
+// Styles inchangés...
 const bagStyles = StyleSheet.create({
-    container: {
-        alignItems: 'center',
-        marginVertical: 10,
-    },
-    topHook: {
-        width: 28,
-        height: 14,
-        borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
-        borderWidth: 3,
-        borderColor: '#B0BEC5',
-        borderBottomWidth: 0,
-    },
-    bagBody: {
-        width: 110,
-        height: 135,
-        borderRadius: 20,
-        borderWidth: 3,
-        borderColor: '#B0BEC5',
-        backgroundColor: '#F1F5F9',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-        position: 'relative',
-    },
-    bloodLiquid: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '65%',
-        backgroundColor: '#C62828',
-        borderBottomLeftRadius: 16,
-        borderBottomRightRadius: 16,
-    },
-    labelCard: {
-        width: 62,
-        height: 52,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 3,
-        zIndex: 2,
-    },
-    labelText: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#1E293B',
-    },
-    bottomTube: {
-        width: 14,
-        height: 10,
-        backgroundColor: '#B0BEC5',
-        borderBottomLeftRadius: 4,
-        borderBottomRightRadius: 4,
-    },
+    container: { alignItems: 'center', marginVertical: 10 },
+    topHook: { width: 28, height: 14, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderWidth: 3, borderColor: '#B0BEC5', borderBottomWidth: 0 },
+    bagBody: { width: 110, height: 135, borderRadius: 20, borderWidth: 3, borderColor: '#B0BEC5', backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative' },
+    bloodLiquid: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%', backgroundColor: '#C62828', borderBottomLeftRadius: 16, borderBottomRightRadius: 16 },
+    labelCard: { width: 62, height: 52, backgroundColor: '#FFFFFF', borderRadius: 10, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 3, zIndex: 2 },
+    labelText: { fontSize: 22, fontWeight: 'bold', color: '#1E293B' },
+    bottomTube: { width: 14, height: 10, backgroundColor: '#B0BEC5', borderBottomLeftRadius: 4, borderBottomRightRadius: 4 },
 });
 
-// Styles de l'application
 const styles = StyleSheet.create({
-    backgroundImage: {
-        flex: 1,
-        width: '100%',
-        height: '100%',
-    },
-    container: {
-        flex: 1,
-    },
-    scrollContainer: {
-        flexGrow: 1,
-        paddingHorizontal: 18,
-        paddingVertical: 24,
-        justifyContent: 'center',
-    },
-    cardContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.94)',
-        borderRadius: 24,
-        paddingHorizontal: 20,
-        paddingVertical: 22,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 6,
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: 14,
-    },
-    brandTitle: {
-        fontSize: 34,
-        fontWeight: '900',
-        color: '#C62828',
-        letterSpacing: 1,
-    },
-    brandSubtitle: {
-        fontSize: 14,
-        color: '#64748B',
-        marginTop: 2,
-    },
-    toggleContainer: {
-        flexDirection: 'row',
-        backgroundColor: '#E2E8F0',
-        borderRadius: 12,
-        padding: 4,
-        marginBottom: 16,
-    },
-    toggleButton: {
-        flex: 1,
-        paddingVertical: 10,
-        alignItems: 'center',
-        borderRadius: 8,
-    },
-    toggleActive: {
-        backgroundColor: '#1E293B',
-    },
-    toggleText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#64748B',
-    },
-    toggleTextActive: {
-        color: '#FFFFFF',
-    },
-    inputGroup: {
-        marginBottom: 12,
-    },
-    label: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#334155',
-        marginBottom: 6,
-    },
-    input: {
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#CBD5E1',
-        borderRadius: 10,
-        paddingHorizontal: 14,
-        paddingVertical: 11,
-        fontSize: 15,
-        color: '#0F172A',
-    },
-    bloodSection: {
-        marginVertical: 6,
-        alignItems: 'center',
-    },
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#1E293B',
-        alignSelf: 'flex-start',
-        marginBottom: 4,
-    },
-    unknownOptionRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 10,
-        alignSelf: 'flex-start',
-    },
-    checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 5,
-        borderWidth: 2,
-        borderColor: '#64748B',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-        backgroundColor: '#FFFFFF',
-    },
-    checkboxActive: {
-        backgroundColor: '#C62828',
-        borderColor: '#C62828',
-    },
-    checkmark: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: 'bold',
-    },
-    unknownOptionText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    selectorRow: {
-        flexDirection: 'row',
-        backgroundColor: '#F1F5F9',
-        borderRadius: 10,
-        padding: 3,
-        marginVertical: 4,
-        width: '100%',
-    },
-    selectorButton: {
-        flex: 1,
-        paddingVertical: 10,
-        alignItems: 'center',
-        borderRadius: 7,
-    },
-    selectorButtonActive: {
-        backgroundColor: '#C62828',
-    },
-    selectorText: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#64748B',
-    },
-    selectorTextActive: {
-        color: '#FFFFFF',
-    },
-    forgotPassButton: {
-        alignSelf: 'flex-end',
-        marginBottom: 14,
-    },
-    forgotPassText: {
-        fontSize: 13,
-        color: '#C62828',
-        fontWeight: '600',
-    },
-    submitButton: {
-        backgroundColor: '#C62828',
-        paddingVertical: 14,
-        borderRadius: 25,
-        alignItems: 'center',
-        marginTop: 10,
-        shadowColor: '#C62828',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-    submitButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    backgroundImage: { flex: 1, width: '100%', height: '100%' },
+    container: { flex: 1 },
+    scrollContainer: { flexGrow: 1, paddingHorizontal: 18, paddingVertical: 24, justifyContent: 'center' },
+    cardContainer: { backgroundColor: 'rgba(255, 255, 255, 0.94)', borderRadius: 24, paddingHorizontal: 20, paddingVertical: 22, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 6 },
+    header: { alignItems: 'center', marginBottom: 14 },
+    brandTitle: { fontSize: 34, fontWeight: '900', color: '#C62828', letterSpacing: 1 },
+    brandSubtitle: { fontSize: 14, color: '#64748B', marginTop: 2 },
+    toggleContainer: { flexDirection: 'row', backgroundColor: '#E2E8F0', borderRadius: 12, padding: 4, marginBottom: 16 },
+    toggleButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+    toggleActive: { backgroundColor: '#1E293B' },
+    toggleText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+    toggleTextActive: { color: '#FFFFFF' },
+    inputGroup: { marginBottom: 12 },
+    label: { fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 },
+    input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: '#0F172A' },
+    bloodSection: { marginVertical: 6, alignItems: 'center' },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B', alignSelf: 'flex-start', marginBottom: 4 },
+    unknownOptionRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 10, alignSelf: 'flex-start' },
+    checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: '#64748B', justifyContent: 'center', alignItems: 'center', marginRight: 10, backgroundColor: '#FFFFFF' },
+    checkboxActive: { backgroundColor: '#C62828', borderColor: '#C62828' },
+    checkmark: { color: '#FFFFFF', fontSize: 13, fontWeight: 'bold' },
+    unknownOptionText: { fontSize: 13, fontWeight: '600', color: '#475569' },
+    selectorRow: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 10, padding: 3, marginVertical: 4, width: '100%' },
+    selectorButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 7 },
+    selectorButtonActive: { backgroundColor: '#C62828' },
+    selectorText: { fontSize: 15, fontWeight: '700', color: '#64748B' },
+    selectorTextActive: { color: '#FFFFFF' },
+    forgotPassButton: { alignSelf: 'flex-end', marginBottom: 14 },
+    forgotPassText: { fontSize: 13, color: '#C62828', fontWeight: '600' },
+    submitButton: { backgroundColor: '#C62828', paddingVertical: 14, borderRadius: 25, alignItems: 'center', marginTop: 10, shadowColor: '#C62828', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 },
+    submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });
