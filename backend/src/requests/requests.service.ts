@@ -1,15 +1,18 @@
 // T4.4 + T4.5 : service des demandes (création, lecture, réponse du donneur).
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { createHash } from 'crypto'; // AJOUT : T5.5
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { canDonateTo } from '../common/rules/blood-compat';
 import { BloodRequest, Donor, RequestResponse } from '../database/entities';
+import { RequestWave } from '../database/entities/requests.entities'; // AJOUT : T5.5
 import { EligibilityStatus, RequestStatus, ResponseType, UserRole } from '../database/enums';
 import { InstitutionsService } from '../institutions/institutions.service';
 import { WavesService } from '../waves/waves.service';
 import { LiveEventsService } from '../live/live-events.service'; // AJOUT T5.4
 import type { CreateRequestDto, GaugeDto, RequestDto, RespondDto, RespondResultDto } from './dto/requests.dto';
+import type { DonorEnRouteDto, LiveStateDto, WaveDto } from './dto/requests.dto'; // AJOUT : T5.5
 
 const PG_UNIQUE_VIOLATION = '23505';
 
@@ -27,6 +30,8 @@ export class RequestsService {
     @Optional() private readonly waves?: WavesService,
     // AJOUT T5.4 : publication Redis des événements temps réel (optionnel : les tests existants n'ont pas à le fournir).
     @Optional() private readonly live?: LiveEventsService,
+    // AJOUT : T5.5 : vagues pour l'état live (optionnel pour ne pas casser les specs existantes).
+    @Optional() @InjectRepository(RequestWave) private readonly waveRows?: Repository<RequestWave>,
   ) {}
 
   toDto(r: BloodRequest): RequestDto {
@@ -106,6 +111,64 @@ export class RequestsService {
   }
 
   /**
+   * AJOUT : T5.5 : état courant du suivi en direct (chargement initial de l'écran, ensuite WebSocket /live).
+   * Mêmes contrôles d'accès que getOne (404, et 403 pour un hôpital qui n'est pas propriétaire).
+   */
+  async getLiveState(id: string, user: AuthenticatedUser): Promise<LiveStateDto> {
+    const req = await this.getOne(id, user);
+    const [gauge, waveRows, donorsEnRoute] = await Promise.all([
+      this.gauge(id, req.quantity),
+      this.waveRows
+        ? this.waveRows.find({ where: { requestId: id }, order: { waveNumber: 'ASC' } })
+        : Promise.resolve([] as RequestWave[]),
+      this.donorsEnRoute(id),
+    ]);
+    const waves: WaveDto[] = waveRows.map((row, i) => {
+      const w = row as RequestWave & { coverage?: number | null; createdAt?: Date };
+      return {
+        number: w.waveNumber,
+        radiusKm: w.radiusKm,
+        sentTo: w.sentTo,
+        // La dernière vague porte la couverture courante ; les précédentes, la valeur enregistrée.
+        coverage: i === waveRows.length - 1 ? gauge.percent : Math.round(Number(w.coverage ?? 0)),
+        createdAt: new Date(w.createdAt ?? Date.now()).toISOString(),
+      };
+    });
+    return {
+      requestId: id,
+      status: req.status,
+      currentRadiusKm: req.currentRadiusKm,
+      gauge,
+      waves,
+      donorsEnRoute,
+    };
+  }
+
+  /** AJOUT : T5.5 : donneurs « Je viens », anonymisés (R4/F1.5) : identifiant haché, jamais nom ni téléphone. */
+  private async donorsEnRoute(requestId: string): Promise<DonorEnRouteDto[]> {
+    const rows: Array<{ donorId: string; bloodGroup: string; distanceKm: string | number | null; respondedAt: Date | string }> =
+      await this.responses.query(
+        `SELECT r.donor_id AS "donorId",
+                d.blood_group AS "bloodGroup",
+                ROUND((ST_Distance(d.position, i.position) / 1000.0)::numeric, 1) AS "distanceKm",
+                r.created_at AS "respondedAt"
+           FROM request_responses r
+           JOIN donors d ON d.user_id = r.donor_id
+           JOIN blood_requests b ON b.id = r.request_id
+           JOIN institutions i ON i.id = b.institution_id
+          WHERE r.request_id = $1 AND r.response = $2
+          ORDER BY r.created_at ASC`,
+        [requestId, ResponseType.JeViens],
+      );
+    return rows.map((r) => ({
+      anonymousId: 'don-' + createHash('sha256').update(`${requestId}:${r.donorId}`).digest('hex').slice(0, 4),
+      bloodGroup: r.bloodGroup as DonorEnRouteDto['bloodGroup'],
+      distanceKm: Number(r.distanceKm ?? 0),
+      respondedAt: new Date(r.respondedAt).toISOString(),
+    }));
+  }
+
+  /**
    * T4.5 : réponse du donneur. Contrôle serveur, 3ᵉ niveau de F2.4 :
    * demande active, donneur éligible, compatible, délai entre dons écoulé, une seule réponse par demande.
    */
@@ -152,6 +215,19 @@ export class RequestsService {
         .catch((e: Error) => this.logger.warn(`Événement temps réel non publié pour ${requestId} : ${e.message}`));
     }
     // T5.5 : clôture quand le besoin est couvert.
+    // AJOUT : T5.5 : le filtre sur le statut évite d'écraser une demande déjà clôturée ailleurs ;
+    // un échec ici ne casse pas la réponse (le contrôle différé de la vague clôturera la demande).
+    if (accepting && gauge.accepted >= req.quantity) {
+      try {
+        await this.requests.update(
+          { id: requestId, status: RequestStatus.Active },
+          { status: RequestStatus.Couverte, closedAt: new Date() },
+        );
+        this.logger.log(`Demande ${requestId} clôturée : ${RequestStatus.Couverte} (${gauge.accepted}/${req.quantity})`);
+      } catch (e) {
+        this.logger.warn(`Clôture automatique échouée pour ${requestId} : ${(e as Error).message}`);
+      }
+    }
     return {
       requestId,
       response: dto.response as unknown as RespondResultDto['response'],
