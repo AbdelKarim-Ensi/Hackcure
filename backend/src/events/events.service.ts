@@ -1,9 +1,11 @@
 // AJOUT : T6.1 - service réel des événements CRT (liste filtrée, création, détail).
 // AJOUT : T6.2 - inscription à un créneau (R5 à la date de l'événement, capacité sous verrou, QR signé).
+// AJOUT : T6.3 - notification du nouvel événement et planification des rappels (best-effort, hors réponse HTTP).
 import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -21,17 +23,21 @@ import {
   ListEventsQueryDto,
   RegisterEventDto,
 } from './dto/events.dto';
+import { EventNotifier } from './event-notifier.service';
 import { QrTokenService } from './qr-token.service';
 
 type SlotDef = { time: string; capacity?: number };
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+
   constructor(
     @InjectRepository(CrtEvent) private readonly events: Repository<CrtEvent>,
     @InjectRepository(EventRegistration) private readonly registrations: Repository<EventRegistration>,
     private readonly dataSource: DataSource,
     private readonly qr: QrTokenService,
+    private readonly notifier: EventNotifier,
   ) {}
 
   /** Requête de base : lit aussi lat/lng de la position, et la distance si lat/lng sont fournis. */
@@ -142,7 +148,22 @@ export class EventsService {
         status: DbEventStatus.Publie,
       }),
     );
+
+    // T6.3 : notification de priorité normale, en tâche de fond (un échec ne casse pas la création).
+    void this.notifier
+      .notifyNewEvent(saved.id)
+      .catch((e: Error) => this.logger.warn(`Notification du nouvel événement ${saved.id} échouée : ${e.message}`));
+
     return this.getOne(saved.id);
+  }
+
+  /** T6.2 + T6.3 : inscription, puis planification des rappels J-1 / H-2 une fois la transaction validée. */
+  async register(eventId: string, dto: RegisterEventDto, user: AuthenticatedUser): Promise<EventRegistrationDto> {
+    const result = await this.registerTx(eventId, dto, user);
+    void this.notifier
+      .scheduleReminders(result.id)
+      .catch((e: Error) => this.logger.warn(`Rappels non planifiés pour l'inscription ${result.id} : ${e.message}`));
+    return result;
   }
 
   /**
@@ -150,7 +171,7 @@ export class EventsService {
    * R5 : le donneur doit être éligible À LA DATE DE L'ÉVÉNEMENT (422 sinon).
    * Capacité globale et par créneau contrôlées sous verrou sur la ligne de l'événement (409 si atteinte).
    */
-  async register(eventId: string, dto: RegisterEventDto, user: AuthenticatedUser): Promise<EventRegistrationDto> {
+  private async registerTx(eventId: string, dto: RegisterEventDto, user: AuthenticatedUser): Promise<EventRegistrationDto> {
     return this.dataSource.transaction(async (m) => {
       const event = await m.findOne(CrtEvent, { where: { id: eventId }, lock: { mode: 'pessimistic_write' } });
       if (!event) throw new NotFoundException('Événement introuvable');
