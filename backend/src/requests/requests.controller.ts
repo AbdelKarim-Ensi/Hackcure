@@ -1,4 +1,5 @@
 // T3 : squelette (live reste mocké jusqu'à T5.5).
+// AJOUT : T5.5 - live branché sur RequestsService.getLiveState (ancien mock T3 retiré).
 // T2.4 : POST /requests exige un établissement validé (F5).
 // AJOUT : T4.4 / T4.5 - create, list, getOne et respond branchés sur RequestsService.
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
@@ -94,22 +95,9 @@ export class RequestsController {
   @ApiParam({ name: 'id', example: MOCK_IDS.request })
   @ApiOkResponse({ type: LiveStateDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  live(@Param('id', ParseUUIDPipe) id: string): LiveStateDto {
-    return {
-      requestId: id,
-      status: RequestStatus.ACTIVE,
-      currentRadiusKm: 5,
-      gauge: { accepted: 1, needed: 10, percent: 10 },
-      waves: [{ number: 1, radiusKm: 5, sentTo: 2, coverage: 10, createdAt: MOCK_NOW }],
-      donorsEnRoute: [
-        {
-          anonymousId: 'don-7f3a',
-          bloodGroup: BloodGroup.O_POS,
-          distanceKm: 3.2,
-          respondedAt: '2026-10-03T10:31:12.000Z',
-        },
-      ],
-    };
+  // AJOUT : T5.5 - données réelles (jauge, vagues, donneurs en route anonymisés) ; 403 si l'hôpital n'est pas propriétaire.
+  live(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser): Promise<LiveStateDto> {
+    return this.requests.getLiveState(id, user);
   }
 
   @Post(':id/respond')

@@ -1,3 +1,4 @@
+import * as argon2 from 'argon2';
 import dataSource from './data-source';
 
 if (process.env.NODE_ENV === 'production') {
@@ -18,7 +19,7 @@ const pick = <T>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 
-const HASH = '!seed-not-a-real-hash!'; // remplacé par argon2 en T2
+let HASH = '';
 const REST_DAYS = 90;                  // indicatif, à valider avec le CNTS
 const FIRST = ['Mohamed', 'Ahmed', 'Yassine', 'Amine', 'Skander', 'Oussama', 'Sarra', 'Ines', 'Mariem', 'Rim', 'Nour', 'Salma'];
 const LAST = ['Ben Salah', 'Trabelsi', 'Jebali', 'Gharbi', 'Mansouri', 'Bouazizi', 'Khelifi', 'Hamdi', 'Chaabane', 'Mejri'];
@@ -39,6 +40,7 @@ const INSTITUTIONS = [
 ];
 
 async function main() {
+  HASH = await argon2.hash(process.env.SEED_PASSWORD ?? 'Damm2026!', { type: argon2.argon2id });
   await dataSource.initialize();
   await dataSource.transaction(async (m) => {
     await m.query(`TRUNCATE audit_log, notifications, stocks, event_registrations, events, request_responses,
