@@ -23,7 +23,8 @@
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed": "ts-node src/database/seed.ts",
-    "openapi:generate": "ts-node src/contract/generate-openapi.ts"
+    "openapi:generate": "ts-node src/contract/generate-openapi.ts",
+    "perf": "bash scripts/perf-t5-6.sh"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -63,6 +64,7 @@
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.4.2",
+    "socket.io-client": "^4.8.4",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.4.0",

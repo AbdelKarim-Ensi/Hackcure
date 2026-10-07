@@ -10,7 +10,7 @@ Suivi en direct d'une demande urgente. Les schémas des charges utiles sont dans
 
 - Bibliothèque : Socket.IO, namespace `/live`.
 - Authentification : le JWT d'accès est envoyé au handshake, dans `auth.token`.
-- Rôles autorisés : `hopital` (sa propre demande), `direction`, `admin`.
+- Rôles autorisés : `hopital` (sa propre demande), `crt`, `direction`, `admin`.
 
 ```js
 import { io } from 'socket.io-client';
@@ -23,7 +23,8 @@ socket.emit('subscribe', { requestId });     // rejoint la room de la demande
 socket.emit('unsubscribe', { requestId });   // quitte la room
 ```
 
-Réponse à `subscribe` (accusé) : `{ ok: true }`, ou `{ ok: false, error: 'forbidden' | 'not_found' }`.
+Réponse à `subscribe` (accusé) : `{ ok: true, requestId }`, ou `{ ok: false, error: 'unauthorized' | 'invalid_request_id' | 'forbidden' }`.
+Une demande introuvable renvoie `forbidden`. `join_request` / `leave_request` sont des alias de `subscribe` / `unsubscribe`.
 
 ## Événements serveur vers client
 

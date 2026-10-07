@@ -95,6 +95,17 @@ export class LiveGateway implements OnModuleInit, OnModuleDestroy {
     return { ok: true, requestId };
   }
 
+  /** Alias du contrat v1 (docs/ws-live.md). */
+  @SubscribeMessage('subscribe')
+  subscribe(@ConnectedSocket() socket: Socket, @MessageBody() body: { requestId?: unknown }): Promise<JoinResult> {
+    return this.joinRequest(socket, body);
+  }
+
+  @SubscribeMessage('unsubscribe')
+  unsubscribe(@ConnectedSocket() socket: Socket, @MessageBody() body: { requestId?: unknown }): Promise<JoinResult> {
+    return this.leaveRequest(socket, body);
+  }
+
   /** hôpital : sa propre demande ; crt, direction, admin : toutes ; donneur : jamais. */
   private async canAccess(user: AuthenticatedUser, requestId: string): Promise<boolean> {
     const role: string = user.role;
