@@ -46,6 +46,8 @@ export enum InstitutionType {
   HOPITAL = 'hopital',
   BANQUE_SANG = 'banque_sang',
   CENTRE_TRANSFUSION = 'centre_transfusion',
+  // AJOUT : type Croissant-Rouge (collectes de don volontaire), migration CroissantRouge1790000000001
+  CROISSANT_ROUGE = 'croissant_rouge',
 }
 
 export enum ValidationStatus {
