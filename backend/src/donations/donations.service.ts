@@ -1,8 +1,9 @@
 // T4.3 : service des dons (prochain don possible, confirmation d'un don).
 // Règle F2 provisoire dans common/rules/donation-interval.ts (à remplacer par M2, T11).
+// AJOUT : T6.4 - confirm() accepte un EntityManager optionnel pour s'exécuter dans la transaction d'un pointage.
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { computeNextDonationDate, isValidIsoDate, todayIso } from '../common/rules/donation-interval';
 import { Donation, Donor, Institution } from '../database/entities';
@@ -65,8 +66,14 @@ export class DonationsService {
    * Enregistre un don confirmé par le personnel (hôpital ou CRT) et recalcule le prochain don possible.
    * Le personnel médical fait foi (R6) : le délai entre dons n'est pas bloquant ici, il l'est pour les alertes.
    * Un don saisi avec une date ancienne ne fait jamais reculer les dates déjà enregistrées.
+   * AJOUT : T6.4 - si `manager` est fourni, l'écriture se fait dans cette transaction (pointage d'événement).
    */
-  async confirm(dto: ConfirmDonationDto, actor: AuthenticatedUser, now: Date = new Date()): Promise<DonationDto> {
+  async confirm(
+    dto: ConfirmDonationDto,
+    actor: AuthenticatedUser,
+    now: Date = new Date(),
+    manager?: EntityManager,
+  ): Promise<DonationDto> {
     const today = todayIso(now);
     const donatedAt = (dto.donatedAt ?? today).slice(0, 10);
     if (!isValidIsoDate(donatedAt)) throw new BadRequestException('Date du don invalide');
@@ -80,7 +87,7 @@ export class DonationsService {
     donor.nextDonationPossibleDate = later(donor.nextDonationPossibleDate, computeNextDonationDate(donatedAt, dto.type));
 
     // Le don et la mise à jour du donneur passent ensemble ou pas du tout.
-    const donation = await this.donations.manager.transaction(async (m) => {
+    const write = async (m: EntityManager) => {
       const row = await m.save(Donation, {
         donorId: donor.userId,
         type: dto.type as never,
@@ -91,7 +98,8 @@ export class DonationsService {
       });
       await m.save(Donor, donor);
       return row;
-    });
+    };
+    const donation = manager ? await write(manager) : await this.donations.manager.transaction(write);
 
     return {
       id: donation.id,

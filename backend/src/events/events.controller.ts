@@ -1,6 +1,7 @@
 // AJOUT : T3 - squelette du contrôleur events (données mockées, services réels en T6)
 // AJOUT : T6.1 - list, create et getOne branchés sur EventsService.
 // AJOUT : T6.2 - register branché sur EventsService.register.
+// AJOUT : T6.4 - checkin branché sur EventCheckinService (dashboard reste mocké jusqu'à T6.5).
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
@@ -16,7 +17,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
-import { BloodGroup, RegistrationStatus, UserRole } from '../common/enums';
+import { BloodGroup, UserRole } from '../common/enums';
 import { MOCK_IDS } from '../contract/mocks';
 import {
   CheckinDto,
@@ -28,21 +29,16 @@ import {
   ListEventsQueryDto,
   RegisterEventDto,
 } from './dto/events.dto';
+import { EventCheckinService } from './events-checkin.service';
 import { EventsService } from './events.service';
-
-const mockRegistration = (eventId: string, slot = '09:00'): EventRegistrationDto => ({
-  id: MOCK_IDS.registration,
-  eventId,
-  donorId: MOCK_IDS.donorUser,
-  slot,
-  status: RegistrationStatus.INSCRIT,
-  qrToken: 'signed.qr.token',
-});
 
 @ApiTags('events')
 @Controller('events')
 export class EventsController {
-  constructor(private readonly events: EventsService) {}
+  constructor(
+    private readonly events: EventsService,
+    private readonly checkinService: EventCheckinService,
+  ) {}
 
   @Get()
   @ApiRoles(UserRole.DONNEUR, UserRole.CRT, UserRole.DIRECTION, UserRole.ADMIN)
@@ -110,12 +106,12 @@ export class EventsController {
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiOkResponse({ type: CheckinResultDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'Inscription introuvable ou jeton invalide' })
-  checkin(@Param('id', ParseUUIDPipe) id: string, @Body() _dto: CheckinDto): CheckinResultDto {
-    return {
-      registration: { ...mockRegistration(id), status: RegistrationStatus.PRESENT },
-      donationId: MOCK_IDS.donation,
-      nextDonationPossibleDate: '2027-01-03',
-    };
+  checkin(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CheckinDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CheckinResultDto> {
+    return this.checkinService.checkin(id, dto, user);
   }
 
   @Get(':id/dashboard')
