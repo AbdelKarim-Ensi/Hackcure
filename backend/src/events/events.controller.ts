@@ -1,7 +1,8 @@
 // AJOUT : T3 - squelette du contrôleur events (données mockées, services réels en T6)
 // AJOUT : T6.1 - list, create et getOne branchés sur EventsService.
 // AJOUT : T6.2 - register branché sur EventsService.register.
-// AJOUT : T6.4 - checkin branché sur EventCheckinService (dashboard reste mocké jusqu'à T6.5).
+// AJOUT : T6.4 - checkin branché sur EventCheckinService.
+// AJOUT : T6.5 - dashboard branché sur EventDashboardService (plus de mock).
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
@@ -17,7 +18,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
-import { BloodGroup, UserRole } from '../common/enums';
+import { UserRole } from '../common/enums';
 import { MOCK_IDS } from '../contract/mocks';
 import {
   CheckinDto,
@@ -30,6 +31,7 @@ import {
   RegisterEventDto,
 } from './dto/events.dto';
 import { EventCheckinService } from './events-checkin.service';
+import { EventDashboardService } from './events-dashboard.service';
 import { EventsService } from './events.service';
 
 @ApiTags('events')
@@ -38,6 +40,7 @@ export class EventsController {
   constructor(
     private readonly events: EventsService,
     private readonly checkinService: EventCheckinService,
+    private readonly dashboardService: EventDashboardService,
   ) {}
 
   @Get()
@@ -119,21 +122,10 @@ export class EventsController {
   @ApiOperation({ summary: "Tableau de bord de l'organisateur" })
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiOkResponse({ type: EventDashboardDto })
-  dashboard(@Param('id', ParseUUIDPipe) id: string): EventDashboardDto {
-    return {
-      eventId: id,
-      registered: 42,
-      present: 35,
-      absent: 7,
-      donations: 33,
-      byBloodGroup: [
-        { bloodGroup: BloodGroup.O_POS, count: 12 },
-        { bloodGroup: BloodGroup.A_POS, count: 9 },
-        { bloodGroup: BloodGroup.B_POS, count: 5 },
-        { bloodGroup: BloodGroup.O_NEG, count: 3 },
-        { bloodGroup: BloodGroup.A_NEG, count: 2 },
-        { bloodGroup: BloodGroup.AB_POS, count: 2 },
-      ],
-    };
+  dashboard(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<EventDashboardDto> {
+    return this.dashboardService.dashboard(id, user);
   }
 }
