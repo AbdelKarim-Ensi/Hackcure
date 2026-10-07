@@ -1,5 +1,6 @@
 // AJOUT : T3 - squelette du contrôleur events (données mockées, services réels en T6)
 // AJOUT : T6.1 - list, create et getOne branchés sur EventsService.
+// AJOUT : T6.2 - register branché sur EventsService.register.
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
@@ -90,8 +91,12 @@ export class EventsController {
     description: "Donneur non éligible à la date de l'événement",
   })
   @ApiConflictResponse({ type: ErrorResponseDto, description: 'Capacité atteinte ou déjà inscrit' })
-  register(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RegisterEventDto): EventRegistrationDto {
-    return mockRegistration(id, dto.slot);
+  register(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RegisterEventDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<EventRegistrationDto> {
+    return this.events.register(id, dto, user);
   }
 
   @Post(':id/checkin')

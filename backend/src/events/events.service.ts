@@ -1,17 +1,37 @@
 // AJOUT : T6.1 - service réel des événements CRT (liste filtrée, création, détail).
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+// AJOUT : T6.2 - inscription à un créneau (R5 à la date de l'événement, capacité sous verrou, QR signé).
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { DataSource, In, Repository, SelectQueryBuilder } from 'typeorm';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { CrtEvent, EventRegistration } from '../database/entities/events.entities';
-import { EventStatus as DbEventStatus, RegistrationStatus } from '../database/enums';
+import { Donor } from '../database/entities/identity.entities';
+import { EligibilityStatus, EventStatus as DbEventStatus, RegistrationStatus } from '../database/enums';
 import { EventStatus } from '../common/enums';
-import { CreateEventDto, EventDto, ListEventsQueryDto } from './dto/events.dto';
+import {
+  CreateEventDto,
+  EventDto,
+  EventRegistrationDto,
+  ListEventsQueryDto,
+  RegisterEventDto,
+} from './dto/events.dto';
+import { QrTokenService } from './qr-token.service';
+
+type SlotDef = { time: string; capacity?: number };
 
 @Injectable()
 export class EventsService {
   constructor(
     @InjectRepository(CrtEvent) private readonly events: Repository<CrtEvent>,
     @InjectRepository(EventRegistration) private readonly registrations: Repository<EventRegistration>,
+    private readonly dataSource: DataSource,
+    private readonly qr: QrTokenService,
   ) {}
 
   /** Requête de base : lit aussi lat/lng de la position, et la distance si lat/lng sont fournis. */
@@ -123,5 +143,63 @@ export class EventsService {
       }),
     );
     return this.getOne(saved.id);
+  }
+
+  /**
+   * T6.2 : inscription à un créneau.
+   * R5 : le donneur doit être éligible À LA DATE DE L'ÉVÉNEMENT (422 sinon).
+   * Capacité globale et par créneau contrôlées sous verrou sur la ligne de l'événement (409 si atteinte).
+   */
+  async register(eventId: string, dto: RegisterEventDto, user: AuthenticatedUser): Promise<EventRegistrationDto> {
+    return this.dataSource.transaction(async (m) => {
+      const event = await m.findOne(CrtEvent, { where: { id: eventId }, lock: { mode: 'pessimistic_write' } });
+      if (!event) throw new NotFoundException('Événement introuvable');
+
+      const today = new Date().toISOString().slice(0, 10);
+      if (event.status !== DbEventStatus.Publie) throw new ConflictException("Cet événement n'est plus ouvert");
+      if (event.eventDate < today) throw new ConflictException('Cet événement est déjà passé');
+
+      const slotDef = (event.slots as unknown as SlotDef[]).find((s) => s.time === dto.slot);
+      if (!slotDef) throw new BadRequestException("Ce créneau n'existe pas pour cet événement");
+
+      const donor = await m.findOne(Donor, { where: { userId: user.id } });
+      if (!donor) throw new NotFoundException('Profil donneur introuvable');
+
+      if (donor.eligibilityStatus !== EligibilityStatus.Eligible) {
+        throw new UnprocessableEntityException("Vous n'êtes pas éligible au don");
+      }
+      if (donor.nextDonationPossibleDate && donor.nextDonationPossibleDate > event.eventDate) {
+        throw new UnprocessableEntityException(
+          `Non éligible à la date de l'événement : prochain don possible le ${donor.nextDonationPossibleDate}`,
+        );
+      }
+
+      const existing = await m.findOne(EventRegistration, { where: { eventId, donorId: donor.userId } });
+      if (existing && existing.status !== RegistrationStatus.Annule) {
+        throw new ConflictException('Vous êtes déjà inscrit à cet événement');
+      }
+
+      const active = In([RegistrationStatus.Inscrit, RegistrationStatus.Present]);
+      const total = await m.count(EventRegistration, { where: { eventId, status: active } });
+      if (total >= event.capacity) throw new ConflictException("Capacité de l'événement atteinte");
+      if (slotDef.capacity != null) {
+        const inSlot = await m.count(EventRegistration, { where: { eventId, slot: dto.slot, status: active } });
+        if (inSlot >= slotDef.capacity) throw new ConflictException('Ce créneau est complet');
+      }
+
+      const reg = existing ?? m.create(EventRegistration, { eventId, donorId: donor.userId });
+      reg.slot = dto.slot;
+      reg.status = RegistrationStatus.Inscrit;
+      const saved = await m.save(reg);
+
+      return {
+        id: saved.id,
+        eventId,
+        donorId: donor.userId,
+        slot: saved.slot,
+        status: saved.status as unknown as EventRegistrationDto['status'],
+        qrToken: this.qr.sign({ registrationId: saved.id, eventId, donorId: donor.userId }, event.eventDate),
+      };
+    });
   }
 }
