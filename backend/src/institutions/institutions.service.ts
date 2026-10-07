@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+// AJOUT : In ajouté à l'import (déclarants des établissements listés)
+import { In, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { Institution, User } from '../database/entities';
 import { UserRole, ValidationStatus } from '../database/enums';
@@ -55,11 +56,28 @@ export class InstitutionsService {
     return this.toDto(inst);
   }
 
-  async list(status?: string): Promise<InstitutionDto[]> {
+  // AJOUT : paramètre actor (admin => ajoute declarantPhone et declarantName). Signature d'origine : list(status?: string)
+  async list(status?: string, actor?: AuthenticatedUser): Promise<InstitutionDto[]> {
     const rows = await this.institutions.find({
       where: status ? { validationStatus: status as ValidationStatus } : {},
       order: { name: 'ASC' },
     });
+    // AJOUT : pour l'admin, joindre le compte déclarant (téléphone fixe + nom) afin de rappeler l'établissement avant d'approuver
+    if (actor?.role === UserRole.Admin && rows.length > 0) {
+      const owners = await this.users.find({ where: { institutionId: In(rows.map((r) => r.id)) } });
+      const byInstitution = new Map<string, User>();
+      for (const o of owners) {
+        if (o.institutionId && !byInstitution.has(o.institutionId)) byInstitution.set(o.institutionId, o);
+      }
+      return rows.map((r) => {
+        const o = byInstitution.get(r.id);
+        return {
+          ...this.toDto(r),
+          ...(o ? { declarantPhone: o.phone } : {}),
+          ...(o?.fullName ? { declarantName: o.fullName } : {}),
+        };
+      });
+    }
     return rows.map((r) => this.toDto(r));
   }
 
