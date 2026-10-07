@@ -204,6 +204,61 @@
         ]
       }
     },
+    "/users/me": {
+      "get": {
+        "description": "Renvoie le compte et son établissement (null si aucun n'a été déclaré). Sert à afficher l'état « en attente d'approbation » ou « refusé ».",
+        "operationId": "UsersController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt, direction, admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Profil de l'utilisateur connecté",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "donneur",
+          "hopital",
+          "crt",
+          "direction",
+          "admin"
+        ]
+      }
+    },
     "/users/me/device-token": {
       "put": {
         "description": "À appeler après la connexion et à chaque renouvellement du jeton.",
@@ -791,6 +846,7 @@
         ]
       },
       "get": {
+        "description": "Pour l'admin, chaque établissement inclut declarantPhone et declarantName (compte qui l'a déclaré).",
         "operationId": "InstitutionsController_list",
         "parameters": [
           {
@@ -1293,6 +1349,62 @@
         ],
         "x-roles": [
           "donneur"
+        ]
+      }
+    },
+    "/notifications/me": {
+      "get": {
+        "description": "Historique des alertes et rappels, du plus récent au plus ancien. Sert d'écran « Mes alertes » dans l'app.",
+        "operationId": "NotificationsController_listMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mes notifications",
+        "tags": [
+          "notifications"
+        ],
+        "x-roles": [
+          "donneur",
+          "hopital",
+          "crt"
         ]
       }
     },
@@ -1845,62 +1957,6 @@
           "admin"
         ]
       }
-    },
-    "/notifications/me": {
-      "get": {
-        "description": "Historique des alertes et rappels, du plus récent au plus ancien. Sert d'écran « Mes alertes » dans l'app.",
-        "operationId": "NotificationsController_listMine",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/NotificationDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Token absent, invalide ou expiré",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rôle insuffisant. Rôles autorisés : donneur, hopital, crt",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Mes notifications",
-        "tags": [
-          "notifications"
-        ],
-        "x-roles": [
-          "donneur",
-          "hopital",
-          "crt"
-        ]
-      }
     }
   },
   "info": {
@@ -1926,7 +1982,7 @@
           "phone": {
             "type": "string",
             "example": "+21612345678",
-            "description": "Numéro de téléphone (identifiant de connexion)"
+            "description": "Numéro de téléphone (identifiant de connexion). Fixe tunisien accepté, ex. +21671123456 (comptes hopital et crt)."
           },
           "password": {
             "type": "string",
@@ -1963,7 +2019,7 @@
           "otpSent": {
             "type": "boolean",
             "example": true,
-            "description": "Un code OTP a été envoyé par SMS"
+            "description": "Un code OTP a été envoyé par SMS. false pour les comptes hopital et crt : pas d'OTP, la confiance vient de la validation admin, le compte peut se connecter tout de suite."
           },
           "devOtp": {
             "type": "string",
@@ -2163,6 +2219,110 @@
         },
         "required": [
           "refreshToken"
+        ]
+      },
+      "InstitutionType": {
+        "type": "string",
+        "enum": [
+          "hopital",
+          "banque_sang",
+          "centre_transfusion",
+          "croissant_rouge"
+        ]
+      },
+      "ValidationStatus": {
+        "type": "string",
+        "enum": [
+          "en_attente",
+          "valide",
+          "rejete"
+        ],
+        "description": "en_attente, valide ou rejete : sert à afficher « en attente d'approbation » ou « refusé »"
+      },
+      "MeInstitutionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a1b2c3d4-0001-4aaa-8bbb-000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Hôpital Charles Nicolle"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InstitutionType"
+              }
+            ]
+          },
+          "validationStatus": {
+            "description": "en_attente, valide ou rejete : sert à afficher « en attente d'approbation » ou « refusé »",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ValidationStatus"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "validationStatus"
+        ]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61"
+          },
+          "role": {
+            "example": "hopital",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "example": "+21671123456"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Personnel Hôpital Charles Nicolle",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "example": "actif",
+            "enum": [
+              "actif",
+              "suspendu"
+            ]
+          },
+          "institution": {
+            "nullable": true,
+            "description": "null tant que le compte n'a pas déclaré d'établissement",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeInstitutionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "phone",
+          "fullName",
+          "status",
+          "institution"
         ]
       },
       "DeviceTokenDto": {
@@ -2700,14 +2860,6 @@
           "nextDonationPossibleDate"
         ]
       },
-      "InstitutionType": {
-        "type": "string",
-        "enum": [
-          "hopital",
-          "banque_sang",
-          "centre_transfusion"
-        ]
-      },
       "CreateInstitutionDto": {
         "type": "object",
         "properties": {
@@ -2736,15 +2888,6 @@
           "type",
           "position"
         ]
-      },
-      "ValidationStatus": {
-        "type": "string",
-        "enum": [
-          "en_attente",
-          "valide",
-          "rejete"
-        ],
-        "description": "Seul un établissement valide peut créer une demande (F5)"
       },
       "InstitutionDto": {
         "type": "object",
@@ -2778,6 +2921,16 @@
           },
           "position": {
             "$ref": "#/components/schemas/GeoPointDto"
+          },
+          "declarantPhone": {
+            "type": "string",
+            "example": "+21671123456",
+            "description": "Admin uniquement : téléphone (fixe) du compte qui a déclaré l'établissement"
+          },
+          "declarantName": {
+            "type": "string",
+            "example": "Personnel Hôpital Charles Nicolle",
+            "description": "Admin uniquement : nom du compte qui a déclaré l'établissement"
           }
         },
         "required": [
@@ -3139,6 +3292,73 @@
           "response",
           "accepted",
           "gauge"
+        ]
+      },
+      "NotificationType": {
+        "type": "string",
+        "enum": [
+          "urgence",
+          "evenement",
+          "rappel"
+        ]
+      },
+      "NotificationStatus": {
+        "type": "string",
+        "enum": [
+          "en_attente",
+          "envoyee",
+          "echec",
+          "lue"
+        ]
+      },
+      "NotificationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "f6a7b8c9-0001-4fff-9000-000000000001"
+          },
+          "type": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationType"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationStatus"
+              }
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Charge utile de la notification (voir AlertPayloadDto pour le type urgence). Jamais d'identité patient.",
+            "example": {
+              "requestId": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
+              "bloodGroup": "A+",
+              "hospitalName": "Hôpital Charles Nicolle",
+              "distanceKm": 3.2,
+              "urgency": "urgente"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-03T10:30:00.000Z"
+          },
+          "sentAt": {
+            "type": "string",
+            "example": "2026-10-03T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "payload",
+          "createdAt"
         ]
       },
       "EventSlotDto": {
@@ -3547,73 +3767,6 @@
           "institutionName",
           "position",
           "stocks"
-        ]
-      },
-      "NotificationType": {
-        "type": "string",
-        "enum": [
-          "urgence",
-          "evenement",
-          "rappel"
-        ]
-      },
-      "NotificationStatus": {
-        "type": "string",
-        "enum": [
-          "en_attente",
-          "envoyee",
-          "echec",
-          "lue"
-        ]
-      },
-      "NotificationDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "f6a7b8c9-0001-4fff-9000-000000000001"
-          },
-          "type": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NotificationType"
-              }
-            ]
-          },
-          "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NotificationStatus"
-              }
-            ]
-          },
-          "payload": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "Charge utile de la notification (voir AlertPayloadDto pour le type urgence). Jamais d'identité patient.",
-            "example": {
-              "requestId": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
-              "bloodGroup": "A+",
-              "hospitalName": "Hôpital Charles Nicolle",
-              "distanceKm": 3.2,
-              "urgency": "urgente"
-            }
-          },
-          "createdAt": {
-            "type": "string",
-            "example": "2026-10-03T10:30:00.000Z"
-          },
-          "sentAt": {
-            "type": "string",
-            "example": "2026-10-03T10:30:00.000Z"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "status",
-          "payload",
-          "createdAt"
         ]
       },
       "WsGaugeEventDto": {
