@@ -1,4 +1,5 @@
 // AJOUT : T3 - squelette du contrôleur events (données mockées, services réels en T6)
+// AJOUT : T6.1 - list, create et getOne branchés sur EventsService.
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
@@ -10,10 +11,12 @@ import {
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
-import { BloodGroup, EventStatus, RegistrationStatus, UserRole } from '../common/enums';
-import { MOCK_DONOR_POSITION, MOCK_IDS } from '../contract/mocks';
+import { BloodGroup, RegistrationStatus, UserRole } from '../common/enums';
+import { MOCK_IDS } from '../contract/mocks';
 import {
   CheckinDto,
   CheckinResultDto,
@@ -24,27 +27,7 @@ import {
   ListEventsQueryDto,
   RegisterEventDto,
 } from './dto/events.dto';
-
-const mockEvent = (id: string = MOCK_IDS.event): EventDto => ({
-  id,
-  organizerId: MOCK_IDS.crtUser,
-  title: 'Collecte de sang - Faculté des Sciences de Tunis',
-  placeName: 'Faculté des Sciences de Tunis',
-  address: 'Campus universitaire, 2092 Tunis',
-  position: MOCK_DONOR_POSITION,
-  eventDate: '2026-10-15',
-  slots: [
-    { time: '09:00', capacity: 20 },
-    { time: '11:00', capacity: 20 },
-    { time: '14:00', capacity: 20 },
-  ],
-  capacity: 60,
-  registeredCount: 12,
-  targetGroups: [BloodGroup.O_NEG, BloodGroup.A_NEG],
-  conditions: "Apporter une pièce d'identité",
-  status: EventStatus.PUBLIE,
-  distanceKm: 4.8,
-});
+import { EventsService } from './events.service';
 
 const mockRegistration = (eventId: string, slot = '09:00'): EventRegistrationDto => ({
   id: MOCK_IDS.registration,
@@ -58,6 +41,8 @@ const mockRegistration = (eventId: string, slot = '09:00'): EventRegistrationDto
 @ApiTags('events')
 @Controller('events')
 export class EventsController {
+  constructor(private readonly events: EventsService) {}
+
   @Get()
   @ApiRoles(UserRole.DONNEUR, UserRole.CRT, UserRole.DIRECTION, UserRole.ADMIN)
   @ApiOperation({
@@ -65,8 +50,8 @@ export class EventsController {
     description: 'Liste filtrable par gouvernorat, date et distance (F4.2).',
   })
   @ApiOkResponse({ type: [EventDto] })
-  list(@Query() _query: ListEventsQueryDto): EventDto[] {
-    return [mockEvent()];
+  list(@Query() query: ListEventsQueryDto): Promise<EventDto[]> {
+    return this.events.list(query);
   }
 
   @Post()
@@ -77,8 +62,8 @@ export class EventsController {
       "Déclenche les notifications de priorité normale aux donneurs éligibles de la zone, sans vagues. L'événement apparaît dans le calendrier en moins de 5 s.",
   })
   @ApiCreatedResponse({ type: EventDto })
-  create(@Body() _dto: CreateEventDto): EventDto {
-    return mockEvent();
+  create(@Body() dto: CreateEventDto, @CurrentUser() user: AuthenticatedUser): Promise<EventDto> {
+    return this.events.create(user.id, dto);
   }
 
   @Get(':id')
@@ -87,8 +72,8 @@ export class EventsController {
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiOkResponse({ type: EventDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  getOne(@Param('id', ParseUUIDPipe) id: string): EventDto {
-    return mockEvent(id);
+  getOne(@Param('id', ParseUUIDPipe) id: string): Promise<EventDto> {
+    return this.events.getOne(id);
   }
 
   @Post(':id/register')
