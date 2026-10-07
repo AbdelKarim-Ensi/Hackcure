@@ -1,10 +1,14 @@
 // AJOUT : T3 - squelette du contrôleur stocks (DTO inclus, service réel en T6.6)
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+// AJOUT : T6.6 - list branché sur StocksService (plus de mock, contrat inchangé).
+import { Controller, Get, ParseUUIDPipe, Query } from '@nestjs/common';
+import { ApiForbiddenResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { GeoPointDto } from '../common/dto/geo-point.dto';
 import { BloodGroup, StockLevel, UserRole } from '../common/enums';
-import { MOCK_HOSPITAL_POSITION, MOCK_IDS } from '../contract/mocks';
+import { MOCK_IDS } from '../contract/mocks';
+import { StocksService } from './stocks.service';
 
 export class StockLineDto {
   @ApiProperty({ enum: BloodGroup, enumName: 'BloodGroup' })
@@ -38,13 +42,11 @@ export class InstitutionStockDto {
   stocks!: StockLineDto[];
 }
 
-const THRESHOLD = 10;
-const levelOf = (quantity: number): StockLevel =>
-  quantity < THRESHOLD ? StockLevel.ROUGE : quantity <= THRESHOLD * 1.5 ? StockLevel.ORANGE : StockLevel.VERT;
-
 @ApiTags('stocks')
 @Controller('stocks')
 export class StocksController {
+  constructor(private readonly service: StocksService) {}
+
   @Get()
   @ApiRoles(UserRole.HOPITAL, UserRole.DIRECTION, UserRole.ADMIN)
   @ApiOperation({
@@ -53,29 +55,10 @@ export class StocksController {
   })
   @ApiQuery({ name: 'institutionId', required: false, example: MOCK_IDS.institution })
   @ApiOkResponse({ type: [InstitutionStockDto] })
-  list(@Query('institutionId') _institutionId?: string): InstitutionStockDto[] {
-    const quantities: Record<BloodGroup, number> = {
-      [BloodGroup.A_POS]: 6,
-      [BloodGroup.A_NEG]: 14,
-      [BloodGroup.B_POS]: 22,
-      [BloodGroup.B_NEG]: 4,
-      [BloodGroup.AB_POS]: 12,
-      [BloodGroup.AB_NEG]: 9,
-      [BloodGroup.O_POS]: 30,
-      [BloodGroup.O_NEG]: 3,
-    };
-    return [
-      {
-        institutionId: MOCK_IDS.institution,
-        institutionName: 'Hôpital Charles Nicolle',
-        position: MOCK_HOSPITAL_POSITION,
-        stocks: Object.values(BloodGroup).map((bloodGroup) => ({
-          bloodGroup,
-          quantity: quantities[bloodGroup],
-          alertThreshold: THRESHOLD,
-          level: levelOf(quantities[bloodGroup]),
-        })),
-      },
-    ];
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('institutionId', new ParseUUIDPipe({ optional: true })) institutionId?: string,
+  ): Promise<InstitutionStockDto[]> {
+    return this.service.list(user, institutionId);
   }
 }
