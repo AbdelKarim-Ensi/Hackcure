@@ -1,7 +1,7 @@
 // AJOUT : T3 - squelette du contrôleur stocks (DTO inclus, service réel en T6.6)
 // AJOUT : T6.6 - list branché sur StocksService (plus de mock, contrat inchangé).
 import { Controller, Get, ParseUUIDPipe, Query } from '@nestjs/common';
-import { ApiForbiddenResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
