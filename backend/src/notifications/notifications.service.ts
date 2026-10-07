@@ -1,5 +1,6 @@
 // T4.6 : service de notifications (journal en base, quota hebdomadaire, envoi avec reprises, R4 : jamais d'identité patient).
 // La file BullMQ (reprises persistantes, jobs différés) arrive avec T5.1 ; ici les reprises sont en mémoire.
+// AJOUT : T6.3 - textes des notifications d'événements et de rappels (buildMessage).
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
@@ -44,6 +45,25 @@ export function buildAlertPayload(input: AlertInput): Record<string, unknown> {
     urgency: input.urgency,
     deadline: input.deadline,
   };
+}
+
+/** AJOUT : T6.3 - titre et corps du push selon le type (urgence inchangée). */
+export function buildMessage(type: NotificationType, p: Record<string, unknown>): { title: string; body: string } {
+  const s = (k: string) => String(p[k] ?? '');
+  if (type === NotificationType.Urgence) {
+    return { title: 'Besoin urgent de sang', body: 'Un hôpital près de vous a besoin de votre don.' };
+  }
+  if (type === NotificationType.Evenement) {
+    if (p.kind === 'cancelled') {
+      return { title: 'Collecte annulée', body: `« ${s('title')} » prévue le ${s('eventDate')} est annulée.` };
+    }
+    return { title: 'Nouvelle collecte de sang', body: `${s('title')} - ${s('placeName')}, le ${s('eventDate')}.` };
+  }
+  if (type === NotificationType.Rappel) {
+    const when = p.kind === 'j1' ? 'demain' : 'dans 2 heures';
+    return { title: 'Rappel de don', body: `Collecte ${when} : ${s('title')} à ${s('slot')} (${s('placeName')}).` };
+  }
+  return { title: 'Damm', body: 'Nouvelle notification' };
 }
 
 @Injectable()
@@ -116,10 +136,11 @@ export class NotificationsService {
       n.status = NotificationStatus.Echec;
       return this.notifications.save(n);
     }
+    const { title, body } = buildMessage(n.type, n.payload);
     const message = {
       token: user.fcmToken,
-      title: n.type === NotificationType.Urgence ? 'Besoin urgent de sang' : 'Damm',
-      body: n.type === NotificationType.Urgence ? 'Un hôpital près de vous a besoin de votre don.' : 'Nouvelle notification',
+      title,
+      body,
       data: Object.fromEntries(Object.entries(n.payload).map(([k, v]) => [k, String(v)])),
     };
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
