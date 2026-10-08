@@ -21,7 +21,23 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // AJOUT : T7.5 helmet (CSP coupée hors production pour que Swagger /docs fonctionne)
   const isProd = process.env.NODE_ENV === 'production';
-  app.use(helmet({ contentSecurityPolicy: isProd ? undefined : false }));
+  // AJOUT : T7.5 correctif CodeQL (CSP désactivée = alerte High) : ligne d'origine gardée en commentaire
+  // app.use(helmet({ contentSecurityPolicy: isProd ? undefined : false }));
+  // AJOUT : T7.5 CSP active partout ; seule /docs (Swagger UI) reçoit une CSP assouplie (scripts et styles inline)
+  const apiHelmet = helmet();
+  const docsHelmet = helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+  });
+  app.use((req: { path: string }, res: unknown, next: () => void) =>
+    (req.path.startsWith('/docs') ? docsHelmet : apiHelmet)(req as never, res as never, next),
+  );
   // AJOUT : T7.5 500 générique, détails dans les logs
   app.useGlobalFilters(new AllExceptionsFilter());
   // AJOUT : T3 - DTO validés à l'entrée, champs inconnus ignorés (whitelist), conversion des query params
