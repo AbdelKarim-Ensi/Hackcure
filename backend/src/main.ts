@@ -9,6 +9,9 @@ import { setupSwagger } from './swagger';
 import type Redis from 'ioredis';
 import { RedisIoAdapter } from './live/redis-io.adapter';
 import { REDIS } from './redis/redis.module';
+// AJOUT : T7.5 en-têtes de sécurité et filtre d'exceptions global
+import helmet from 'helmet';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   // AJOUT : T3 - option instrument désactivée tant que @nestjs/observe n'est pas branché dans app.module
@@ -16,10 +19,35 @@ async function bootstrap() {
   //   instrument: ObserveInstrument,
   // });
   const app = await NestFactory.create(AppModule);
+  // AJOUT : T7.5 helmet (CSP coupée hors production pour que Swagger /docs fonctionne)
+  const isProd = process.env.NODE_ENV === 'production';
+  // AJOUT : T7.5 correctif CodeQL (CSP désactivée = alerte High) : ligne d'origine gardée en commentaire
+  // app.use(helmet({ contentSecurityPolicy: isProd ? undefined : false }));
+  // AJOUT : T7.5 CSP active partout ; seule /docs (Swagger UI) reçoit une CSP assouplie (scripts et styles inline)
+  const apiHelmet = helmet();
+  const docsHelmet = helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+  });
+  app.use((req: { path: string }, res: unknown, next: () => void) =>
+    (req.path.startsWith('/docs') ? docsHelmet : apiHelmet)(req as never, res as never, next),
+  );
+  // AJOUT : T7.5 500 générique, détails dans les logs
+  app.useGlobalFilters(new AllExceptionsFilter());
   // AJOUT : T3 - DTO validés à l'entrée, champs inconnus ignorés (whitelist), conversion des query params
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   // AJOUT : T3 - CORS ouvert pour le dashboard (M4) en développement ; restreint en T7.5 via CORS_ORIGIN
-  app.enableCors({ origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true });
+  // app.enableCors({ origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true });
+  // AJOUT : T7.5 en production sans CORS_ORIGIN, CORS fermée
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : !isProd,
+  });
   // AJOUT : T3 - Swagger UI sur /docs, JSON sur /docs/json
   setupSwagger(app);
   // AJOUT T5.3 : WebSocket /live avec adaptateur Redis (doit être posé avant listen)
