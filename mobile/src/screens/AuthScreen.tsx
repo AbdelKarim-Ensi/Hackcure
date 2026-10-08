@@ -9,16 +9,32 @@ import {
     KeyboardAvoidingView,
     Platform,
     ImageBackground,
-    Alert, // <-- Ajout de Alert pour le retour visuel
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_BASE_URL = 'http://10.0.2.2:3000';
 
 type BloodGroup = 'A' | 'B' | 'AB' | 'O';
 type RhFactor = '+' | '-';
+type SexType = 'homme' | 'femme';
 
 const BLOOD_GROUPS: BloodGroup[] = ['A', 'B', 'AB', 'O'];
 const RH_FACTORS: RhFactor[] = ['+', '-'];
 
-// --- Composant interactif Poche de Sang ---
+const formatErrorMessage = (error: any, defaultMsg: string) => {
+    const msg = error.response?.data?.message;
+    if (Array.isArray(msg)) {
+        return msg.join('\n');
+    }
+    if (typeof msg === 'string') {
+        return msg;
+    }
+    return defaultMsg;
+};
+
 const BloodBagIllustration = ({ bloodType }: { bloodType: string }) => {
     return (
         <View style={bagStyles.container}>
@@ -36,69 +52,118 @@ const BloodBagIllustration = ({ bloodType }: { bloodType: string }) => {
 
 export default function AuthScreen({ navigation }: any) {
     const [isLogin, setIsLogin] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    // Form states
-    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [phone, setPhone] = useState(''); // <-- Ajouté pour F1.1 (OTP)
+    const [email, setEmail] = useState('');
 
-    // États du groupe sanguin
+    // Champs requis pour le profil donneur NestJS
+    const [sex, setSex] = useState<SexType>('homme');
+    const [zone, setZone] = useState('Tunis');
+
     const [selectedGroup, setSelectedGroup] = useState<BloodGroup>('B');
     const [selectedRh, setSelectedRh] = useState<RhFactor>('+');
     const [unknownBloodType, setUnknownBloodType] = useState(false);
 
-    // Valeur affichée et envoyée
     const fullBloodType = unknownBloodType ? '?' : `${selectedGroup}${selectedRh}`;
-    const bloodTypeToSubmit = unknownBloodType ? 'Inconnu' : `${selectedGroup}${selectedRh}`;
+    const bloodGroupToSubmit = unknownBloodType ? 'O+' : `${selectedGroup}${selectedRh}`;
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        const cleanPhone = phone.trim();
+
         if (isLogin) {
-            // --- Traitement Connexion ---
-            if (!email.trim() || !password.trim()) {
-                Alert.alert('Champs incomplets', 'Veuillez saisir votre email et votre mot de passe.');
+            // --- CONNEXION (POST /auth/login) ---
+            if (!cleanPhone || !password.trim()) {
+                Alert.alert('Champs incomplets', 'Veuillez saisir votre numéro de téléphone et votre mot de passe.');
                 return;
             }
 
-            Alert.alert('Connexion réussie', `Bienvenue sur Damm !`, [
-                {
-                    text: 'Continuer',
-                    onPress: () => navigation?.navigate('Home'), // ou votre écran d'accueil
-                },
-            ]);
+            setLoading(true);
+            try {
+                const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+                    phone: cleanPhone,
+                    password: password.trim(),
+                });
+
+                if (response.status === 200 || response.status === 201) {
+                    const token = response.data?.accessToken || response.data?.token;
+                    const user = response.data?.user;
+
+                    if (token) {
+                        await AsyncStorage.setItem('token', token);
+                    }
+
+                    const userProfile = {
+                        fullName: user?.fullName || fullName || `Utilisateur (${cleanPhone})`,
+                        phone: cleanPhone,
+                        bloodGroup: user?.bloodGroup || user?.bloodType || bloodGroupToSubmit,
+                    };
+                    await AsyncStorage.setItem('user_profile', JSON.stringify(userProfile));
+
+                    Alert.alert('Connexion réussie', `Bienvenue !`);
+                    navigation?.navigate('Home');
+                }
+            } catch (error: any) {
+                const errorMessage = formatErrorMessage(error, 'Identifiants incorrects ou serveur injoignable.');
+                Alert.alert('Échec de connexion', errorMessage);
+            } finally {
+                setLoading(false);
+            }
         } else {
-            // --- Traitement Inscription (F1.1) ---
-            if (!fullName.trim() || !phone.trim() || !email.trim() || !password.trim()) {
-                Alert.alert('Champs requis', 'Veuillez remplir tous les champs obligatoires.');
+            // --- INSCRIPTION (POST /auth/register) ---
+            if (!fullName.trim() || !cleanPhone || !password.trim() || !zone.trim()) {
+                Alert.alert('Champs requis', 'Veuillez remplir le nom, le téléphone, la zone et le mot de passe.');
                 return;
             }
 
+            setLoading(true);
+
+            // Payload dynamique complet transmis à OtpVerification
             const payload = {
-                fullName,
-                phone,
-                email,
-                password,
-                bloodType: bloodTypeToSubmit,
+                phone: cleanPhone,
+                password: password.trim(),
+                fullName: fullName.trim(),
+                role: 'donneur',
+                email: email.trim(),
+                bloodGroup: bloodGroupToSubmit,
+                sex,
+                zone: zone.trim(),
+                position: { latitude: 36.8065, longitude: 10.1815 },
             };
 
-            console.log('Données inscription envoyées :', payload);
+            try {
+                const response = await axios.post(`${API_BASE_URL}/auth/register`, {
+                    phone: payload.phone,
+                    password: payload.password,
+                    fullName: payload.fullName,
+                    role: payload.role,
+                });
 
-            // Simulation envoi OTP (Prochaine étape F1.1 -> OTP)
-            Alert.alert(
-                'Code OTP envoyé !',
-                `Un code de vérification SMS a été envoyé au ${phone}.`,
-                [
-                    {
-                        text: 'Saisir le code OTP',
-                        onPress: () => {
-                            // Redirection vers l'écran d'OTP ou questionnaire d'éligibilité F1.2
-                            if (navigation) {
-                                navigation.navigate('OtpVerification', { donorData: payload });
-                            }
-                        },
-                    },
-                ]
-            );
+                if (response.status === 201 || response.status === 200) {
+                    Alert.alert(
+                        'Code OTP envoyé !',
+                        `Un code de vérification SMS a été envoyé au ${cleanPhone}.`,
+                        [
+                            {
+                                text: 'Saisir le code OTP',
+                                onPress: () => {
+                                    navigation.navigate('OtpVerification', {
+                                        phone: cleanPhone,
+                                        donorData: payload,
+                                    });
+                                },
+                            },
+                        ]
+                    );
+                }
+            } catch (error: any) {
+                const errorMessage = formatErrorMessage(error, "Une erreur est survenue lors de l'inscription.");
+                Alert.alert("Échec de l'inscription", errorMessage);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -116,9 +181,7 @@ export default function AuthScreen({ navigation }: any) {
                     contentContainerStyle={styles.scrollContainer}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Carte principale */}
                     <View style={styles.cardContainer}>
-                        {/* En-tête */}
                         <View style={styles.header}>
                             <Text style={styles.brandTitle}>Damm</Text>
                             <Text style={styles.brandSubtitle}>
@@ -126,7 +189,6 @@ export default function AuthScreen({ navigation }: any) {
                             </Text>
                         </View>
 
-                        {/* Commutateur Connexion / Inscription */}
                         <View style={styles.toggleContainer}>
                             <TouchableOpacity
                                 style={[styles.toggleButton, isLogin && styles.toggleActive]}
@@ -147,7 +209,18 @@ export default function AuthScreen({ navigation }: any) {
                             </TouchableOpacity>
                         </View>
 
-                        {/* Formulaire d'inscription */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Numéro de téléphone *</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="+21612345678"
+                                placeholderTextColor="#888"
+                                keyboardType="phone-pad"
+                                value={phone}
+                                onChangeText={setPhone}
+                            />
+                        </View>
+
                         {!isLogin && (
                             <>
                                 <View style={styles.inputGroup}>
@@ -161,26 +234,58 @@ export default function AuthScreen({ navigation }: any) {
                                     />
                                 </View>
 
-                                {/* Champ Téléphone (Requis par F1.1 pour OTP) */}
                                 <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>Numéro de téléphone (OTP) *</Text>
+                                    <Text style={styles.label}>Adresse Email (optionnel)</Text>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Ex: +216 20 123 456"
+                                        placeholder="exemple@mail.com"
                                         placeholderTextColor="#888"
-                                        keyboardType="phone-pad"
-                                        value={phone}
-                                        onChangeText={setPhone}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        value={email}
+                                        onChangeText={setEmail}
+                                    />
+                                </View>
+
+                                {/* Choix du Sexe */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Sexe *</Text>
+                                    <View style={styles.selectorRow}>
+                                        <TouchableOpacity
+                                            style={[styles.selectorButton, sex === 'homme' && styles.selectorButtonActive]}
+                                            onPress={() => setSex('homme')}
+                                        >
+                                            <Text style={[styles.selectorText, sex === 'homme' && styles.selectorTextActive]}>
+                                                Homme
+                                            </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.selectorButton, sex === 'femme' && styles.selectorButtonActive]}
+                                            onPress={() => setSex('femme')}
+                                        >
+                                            <Text style={[styles.selectorText, sex === 'femme' && styles.selectorTextActive]}>
+                                                Femme
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+
+                                {/* Choix de la Gouvernorat / Zone */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Gouvernorat / Ville *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Ex: Tunis, Ariana, Sousse..."
+                                        placeholderTextColor="#888"
+                                        value={zone}
+                                        onChangeText={setZone}
                                     />
                                 </View>
 
                                 <View style={styles.bloodSection}>
                                     <Text style={styles.sectionTitle}>Votre groupe sanguin</Text>
-
-                                    {/* Poche de sang */}
                                     <BloodBagIllustration bloodType={fullBloodType} />
 
-                                    {/* Option "Je ne sais pas" */}
                                     <TouchableOpacity
                                         style={styles.unknownOptionRow}
                                         onPress={() => setUnknownBloodType(!unknownBloodType)}
@@ -199,10 +304,8 @@ export default function AuthScreen({ navigation }: any) {
                                         </Text>
                                     </TouchableOpacity>
 
-                                    {/* Sélecteurs désactivés si groupe inconnu */}
                                     {!unknownBloodType && (
                                         <>
-                                            {/* Sélecteur A, B, AB, O */}
                                             <View style={styles.selectorRow}>
                                                 {BLOOD_GROUPS.map((group) => {
                                                     const isSelected = selectedGroup === group;
@@ -228,7 +331,6 @@ export default function AuthScreen({ navigation }: any) {
                                                 })}
                                             </View>
 
-                                            {/* Sélecteur + / - */}
                                             <View style={styles.selectorRow}>
                                                 {RH_FACTORS.map((rh) => {
                                                     const isSelected = selectedRh === rh;
@@ -259,20 +361,6 @@ export default function AuthScreen({ navigation }: any) {
                             </>
                         )}
 
-                        {/* Champs Email & Mot de passe */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Adresse Email *</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="exemple@mail.com"
-                                placeholderTextColor="#888"
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                value={email}
-                                onChangeText={setEmail}
-                            />
-                        </View>
-
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Mot de passe *</Text>
                             <TextInput
@@ -291,11 +379,18 @@ export default function AuthScreen({ navigation }: any) {
                             </TouchableOpacity>
                         )}
 
-                        {/* Bouton de soumission */}
-                        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                            <Text style={styles.submitButtonText}>
-                                {isLogin ? 'Se Connecter' : "S'inscrire"}
-                            </Text>
+                        <TouchableOpacity
+                            style={[styles.submitButton, loading && { opacity: 0.7 }]}
+                            onPress={handleSubmit}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#FFFFFF" />
+                            ) : (
+                                <Text style={styles.submitButtonText}>
+                                    {isLogin ? 'Se Connecter' : "S'inscrire"}
+                                </Text>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
@@ -304,7 +399,6 @@ export default function AuthScreen({ navigation }: any) {
     );
 }
 
-// Styles inchangés...
 const bagStyles = StyleSheet.create({
     container: { alignItems: 'center', marginVertical: 10 },
     topHook: { width: 28, height: 14, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderWidth: 3, borderColor: '#B0BEC5', borderBottomWidth: 0 },

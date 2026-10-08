@@ -14,7 +14,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { submitEligibilityForm, EligibilityAnswers } from '../services/eligibilityService';
 
-export const EligibilityScreen = ({ navigation }: any) => {
+export const EligibilityScreen = ({ navigation, route }: any) => {
   const [age, setAge] = useState<string>('25');
   const [weightKg, setWeightKg] = useState<string>('70');
 
@@ -28,11 +28,24 @@ export const EligibilityScreen = ({ navigation }: any) => {
 
   const [loading, setLoading] = useState(false);
 
-  // Redirection directe vers la page d'accueil en réinitialisant l'historique
+  // Dans EligibilityScreen.tsx
+
   const goToHomeScreen = () => {
+    // Récupération des paramètres disponibles dans EligibilityScreen
+    const token = route?.params?.accessToken;
+    const currentUser = route?.params?.user;
+
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Home' }], // 👈 Remplacez 'Home' par le nom de votre écran d'accueil (ex: 'Main', 'Dashboard')
+      routes: [
+        {
+          name: 'Home',
+          params: {
+            accessToken: token,
+            user: currentUser
+          }, // 👈 Transmission de la session à HomeScreen
+        },
+      ],
     });
   };
 
@@ -45,12 +58,26 @@ export const EligibilityScreen = ({ navigation }: any) => {
       return;
     }
 
+    const token = route?.params?.accessToken;
+    const userId = route?.params?.user?.id || route?.params?.user?.userId;
+
+    if (!token || !userId) {
+      Alert.alert('خطأ', 'جلسة غير صالحة، يرجى إعادة التسجيل');
+      navigation.navigate('Auth');
+      return;
+    }
+
     setLoading(true);
+
+    // Sécurisation du format de date ISO
+    const formattedLastDate = (hasDonatedBefore && lastDonationDate instanceof Date)
+      ? lastDonationDate.toISOString().split('T')[0]
+      : undefined;
 
     const answers: EligibilityAnswers = {
       age: numAge,
       weightKg: numWeight,
-      lastDonationDate: hasDonatedBefore ? lastDonationDate.toISOString().split('T')[0] : undefined,
+      lastDonationDate: formattedLastDate,
       chronicDisease,
       onTreatment,
       hepatitisOrHivHistory: false,
@@ -65,7 +92,7 @@ export const EligibilityScreen = ({ navigation }: any) => {
     };
 
     try {
-      const evaluation = await submitEligibilityForm(answers);
+      const evaluation = await submitEligibilityForm(answers, token, userId);
 
       if (evaluation.isEligible) {
         Alert.alert(
@@ -74,7 +101,11 @@ export const EligibilityScreen = ({ navigation }: any) => {
           [{ text: 'موافق', onPress: goToHomeScreen }]
         );
       } else {
-        const reasonsText = evaluation.reasons.map((r) => `• ${r}`).join('\n');
+        const reasonsList = Array.isArray(evaluation.reasons) ? evaluation.reasons : [];
+        const reasonsText = reasonsList.length > 0
+          ? reasonsList.map((r) => `• ${r || ''}`).join('\n')
+          : 'غير مؤهل للتبرع حالياً.';
+
         Alert.alert(
           'غير مؤهل للتبرع حالياً ⚠️',
           `أسباب عدم الأهلية:\n\n${reasonsText}`,
@@ -82,11 +113,16 @@ export const EligibilityScreen = ({ navigation }: any) => {
         );
       }
     } catch (error: any) {
-      Alert.alert('خطأ', error.message || 'حدث خطأ أثناء الاتصال بالسيرفر');
+      Alert.alert('خطأ', String(error?.message || 'حدث خطأ أثناء الاتصال بالسيرفر'));
     } finally {
       setLoading(false);
     }
   };
+
+  // Formatage sécurisé pour éviter un null dans <Text>
+  const formattedDateString = lastDonationDate instanceof Date
+    ? lastDonationDate.toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -97,7 +133,7 @@ export const EligibilityScreen = ({ navigation }: any) => {
           <Text style={styles.headerSubtitle}>إختبار الأهلية السريع للتبرع</Text>
         </View>
 
-        {/* Âge et Poids */}
+        {/* Informaions de base */}
         <View style={styles.card}>
           <Text style={styles.questionText}>المعلومات الأساسية</Text>
 
@@ -106,8 +142,8 @@ export const EligibilityScreen = ({ navigation }: any) => {
             <TextInput
               style={styles.textInput}
               keyboardType="numeric"
-              value={age}
-              onChangeText={setAge}
+              value={age ?? ''}
+              onChangeText={(val) => setAge(val ?? '')}
               maxLength={3}
             />
           </View>
@@ -117,8 +153,8 @@ export const EligibilityScreen = ({ navigation }: any) => {
             <TextInput
               style={styles.textInput}
               keyboardType="numeric"
-              value={weightKg}
-              onChangeText={setWeightKg}
+              value={weightKg ?? ''}
+              onChangeText={(val) => setWeightKg(val ?? '')}
               maxLength={3}
             />
           </View>
@@ -177,11 +213,11 @@ export const EligibilityScreen = ({ navigation }: any) => {
             <View style={styles.dateContainer}>
               <Text style={styles.dateLabel}>تاريخ آخر تبرع:</Text>
               <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
-                <Text style={styles.datePickerText}>{lastDonationDate.toISOString().split('T')[0]}</Text>
+                <Text style={styles.datePickerText}>{formattedDateString}</Text>
               </TouchableOpacity>
               {showDatePicker && (
                 <DateTimePicker
-                  value={lastDonationDate}
+                  value={lastDonationDate || new Date()}
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   maximumDate={new Date()}

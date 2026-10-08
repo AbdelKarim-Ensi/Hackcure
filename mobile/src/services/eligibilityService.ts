@@ -2,11 +2,6 @@ import { Platform } from 'react-native';
 
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
 
-const DEV_USER = {
-    phone: '+21612345678',
-    password: 'Password123!',
-};
-
 export interface EligibilityAnswers {
     age: number;
     weightKg: number;
@@ -31,13 +26,12 @@ export interface EvaluationResult {
 }
 
 /**
- * Moteur d'évaluation médicale côté mobile
+ * Évaluation médicale côté mobile (fallback / affichage immédiat)
  */
 export const evaluateEligibility = (answers: EligibilityAnswers): EvaluationResult => {
     const reasons: string[] = [];
     let status: 'eligible' | 'temporaire' | 'definitif' = 'eligible';
 
-    // 1. Contrôle de l'âge
     if (answers.age < 18) {
         reasons.push('العمر أقل من 18 سنة (الحد الأدنى 18 سنة)');
         status = 'temporaire';
@@ -46,37 +40,31 @@ export const evaluateEligibility = (answers: EligibilityAnswers): EvaluationResu
         status = 'temporaire';
     }
 
-    // 2. Contrôle du poids
     if (answers.weightKg < 50) {
         reasons.push('الوزن أقل من 50 كغ (الحد الأدنى 50 كغ)');
         status = 'temporaire';
     }
 
-    // 3. الأمراض المزمنة
     if (answers.chronicDisease) {
         reasons.push('وجود مرض مزمن');
         status = 'temporaire';
     }
 
-    // 4. الأدوية والمضادات الحيوية
     if (answers.onTreatment) {
         reasons.push('تناول أدوية أو مضادات حيوية حالياً');
         status = 'temporaire';
     }
 
-    // 5. الوشم أو الثقب
     if (answers.recentTattooOrPiercing) {
         reasons.push('عمل وشم أو ثقب خلال الـ 4 أشهر الأخيرة');
         status = 'temporaire';
     }
 
-    // 6. الأمراض الفيروسية (دائم)
     if (answers.hepatitisOrHivHistory) {
         reasons.push('سجل إصابة بأمراض كبدية أو فيروسية');
         status = 'definitif';
     }
 
-    // 7. تاريخ آخر تبرع (الحد الأدنى 60 يوم)
     if (answers.lastDonationDate) {
         const lastDate = new Date(answers.lastDonationDate);
         const today = new Date();
@@ -97,70 +85,26 @@ export const evaluateEligibility = (answers: EligibilityAnswers): EvaluationResu
     };
 };
 
-export const getValidAuthToken = async (): Promise<{ token: string; userId: string }> => {
-    try {
-        let loginRes = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(DEV_USER),
-        });
-
-        if (loginRes.ok) {
-            const data = await loginRes.json();
-            return { token: data.accessToken, userId: data.user?.id || data.userId };
-        }
-
-        const regRes = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                phone: DEV_USER.phone,
-                password: DEV_USER.password,
-                role: 'donneur',
-                fullName: 'Donneur Test',
-            }),
-        });
-
-        const regData = await regRes.json().catch(() => ({}));
-        let otpCode = regData.devOtp;
-
-        if (!otpCode) {
-            const otpRes = await fetch(`${API_URL}/auth/otp/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: DEV_USER.phone }),
-            });
-            const otpData = await otpRes.json().catch(() => ({}));
-            otpCode = otpData.devOtp;
-        }
-
-        const verifyRes = await fetch(`${API_URL}/auth/otp/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                phone: DEV_USER.phone,
-                code: otpCode || '056657',
-            }),
-        });
-
-        if (!verifyRes.ok) {
-            const err = await verifyRes.json().catch(() => ({}));
-            throw new Error(err.message || 'Échec de la vérification OTP');
-        }
-
-        const data = await verifyRes.json();
-        return { token: data.accessToken, userId: data.user?.id || data.userId };
-    } catch (error: any) {
-        throw new Error(`Erreur d'authentification: ${error.message}`);
+/**
+ * Soumission du formulaire d'éligibilité au backend NestJS
+ */
+export const submitEligibilityForm = async (
+    answers: EligibilityAnswers,
+    token: string,
+    userId: string
+): Promise<EvaluationResult> => {
+    // 1. Protection contre l'envoi d'un token ou userId invalide
+    if (!token || token === 'undefined' || token === 'null') {
+        throw new Error('Jeton d’authentification manquant. Veuillez vous reconnecter.');
     }
-};
 
-export const submitEligibilityForm = async (answers: EligibilityAnswers) => {
-    const { token, userId } = await getValidAuthToken();
+    if (!userId || userId === 'undefined') {
+        throw new Error('Identifiant utilisateur introuvable.');
+    }
 
-    // Évaluation locale des règles
-    const evaluation = evaluateEligibility(answers);
+    const localEval = evaluateEligibility(answers);
 
+    // Payload conforme au DTO attendu par POST /donors/{id}/eligibility-form
     const payload = {
         age: answers.age,
         weightKg: answers.weightKg,
@@ -176,9 +120,6 @@ export const submitEligibilityForm = async (answers: EligibilityAnswers) => {
         recentFeverOrInfection: answers.recentFeverOrInfection,
         pregnantOrBreastfeeding: answers.pregnantOrBreastfeeding ?? false,
         consent: answers.consent,
-        result: evaluation.status,
-        answersEncrypted: JSON.stringify(answers),
-        questionnaireVersion: 'v1',
     };
 
     const response = await fetch(`${API_URL}/donors/${userId}/eligibility-form`, {
@@ -202,6 +143,11 @@ export const submitEligibilityForm = async (answers: EligibilityAnswers) => {
         throw new Error(message);
     }
 
-    // Retourne le résultat évalué localement avec les raisons précises
-    return evaluation;
+    const backendData = await response.json();
+
+    return {
+        isEligible: backendData.result === 'eligible',
+        status: backendData.result,
+        reasons: backendData.reasons && backendData.reasons.length > 0 ? backendData.reasons : localEval.reasons,
+    };
 };
