@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { dataSourceOptions } from './database/data-source';
 import { ApiContractModule } from './api-contract.module';
+// AJOUT : T7.2 journal d'audit
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { ApiContractModule } from './api-contract.module';
     ApiContractModule,
 
     TypeOrmModule.forRoot(dataSourceOptions),
+    // AJOUT : T7.2
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],
