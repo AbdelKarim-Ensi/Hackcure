@@ -1,3 +1,5 @@
+// AJOUT : T7.3
+import { Throttle } from '@nestjs/throttler';
 import { Public } from '../common/decorators/public.decorator';
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
@@ -42,6 +44,8 @@ export class AuthController {
     return this.auth.register(dto);
   }
 
+  // AJOUT : T7.3 quota strict OTP
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @Post('otp/send')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -53,6 +57,8 @@ export class AuthController {
     return this.auth.sendOtp(dto.phone);
   }
 
+  // AJOUT : T7.3 quota strict OTP
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -68,6 +74,8 @@ export class AuthController {
     return this.auth.verifyOtp(dto.phone, dto.code);
   }
 
+  // AJOUT : T7.3 quota strict login
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Connexion par téléphone et mot de passe' })
