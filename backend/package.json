@@ -24,7 +24,9 @@
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed": "ts-node src/database/seed.ts",
     "openapi:generate": "ts-node src/contract/generate-openapi.ts",
-    "perf": "bash scripts/perf-t5-6.sh"
+    "perf": "bash scripts/perf-t5-6.sh",
+    "demo:reset": "bash scripts/demo-reset.sh",
+    "demo:run": "bash scripts/demo-run.sh"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

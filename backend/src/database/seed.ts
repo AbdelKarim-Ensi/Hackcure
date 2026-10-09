@@ -137,16 +137,17 @@ async function main() {
       }
     }
 
+    // AJOUT : slots au format EventSlotDto (HH:mm + capacity), requis par RegisterEventDto et events.service
     // 2 événements CRT simulés
     await m.query(
       `INSERT INTO events (organizer_id, title, place_name, address, position, event_date, slots, capacity, conditions)
        VALUES
        ($1, 'Collecte de sang — Centre-ville', 'Maison de la culture, Tunis', 'Tunis',
         ST_SetSRID(ST_MakePoint(10.1815, 36.8065), 4326)::geography, $2,
-        '["09:00-11:00","11:00-13:00","14:00-16:00"]'::jsonb, 60, 'Se munir d''une pièce d''identité'),
+        '[{"time":"09:00","capacity":20},{"time":"11:00","capacity":20},{"time":"14:00","capacity":20}]'::jsonb, 60, 'Se munir d''une pièce d''identité'),
        ($1, 'Collecte de sang — Ariana', 'Mairie de l''Ariana', 'Ariana',
         ST_SetSRID(ST_MakePoint(10.1934, 36.8625), 4326)::geography, $3,
-        '["09:00-11:00","14:00-16:00"]'::jsonb, 40, 'Être à jeun depuis moins de 4 h')`,
+        '[{"time":"09:00","capacity":20},{"time":"14:00","capacity":20}]'::jsonb, 40, 'Être à jeun depuis moins de 4 h')`,
       [crt.id, iso(addDays(today, 7)), iso(addDays(today, 14))]);
   });
   await dataSource.destroy();
