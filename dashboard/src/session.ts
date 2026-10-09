@@ -8,8 +8,7 @@ export type Me = {
 }
 export type Pending = {
   id: string; name: string; type: InstType
-  declarantPhone?: string; declarantName?: string | null
-  recognized?: boolean // mode démo uniquement
+  declarantName?: string; declarantPhone?: string; recognized?: boolean
 }
 
 // ---------- Mode démo : comptes fictifs (numéros fixes inventés), mot de passe Demo1234! ----------
@@ -22,19 +21,54 @@ const accounts: Record<string, Me> = {}
   acc(3, 'crt', { id: 'i3', name: 'CNTS Tunis', type: 'centre_transfusion', validationStatus: 'valide' }),
   acc(4, 'hopital', { id: 'i4', name: 'Clinique Test (fictive)', type: 'hopital', validationStatus: 'en_attente' }),
   acc(5, 'hopital', null),
-  acc(6, 'crt', { id: 'i6', name: 'Croissant-Rouge Tunis', type: 'croissant_rouge', validationStatus: 'valide' }),
   acc(9, 'admin', null),
 ].forEach((m) => { accounts[m.phone] = m })
 export const DEMO_ACCOUNTS = Object.values(accounts).map((m) => ({ phone: m.phone, label: m.fullName ?? '', role: m.role }))
 const KNOWN = ['CHU Charles Nicolle', 'Banque de sang de La Rabta', 'CNTS Tunis', 'CHU La Rabta', 'CHU Habib Thameur']
 
-export async function login(phone: string, password: string): Promise<void> {
+// ---------- Mode réel : adaptation des réponses du backend ----------
+const USER_KEY = 'damm.user'
+type LoginUser = { id: string; role: string; phone: string; fullName?: string | null; institutionId?: string | null; institution?: unknown }
+
+// Accepte plusieurs variantes de noms de champs (validationStatus / validation_status / status).
+function normInstitution(raw: unknown): Me['institution'] {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  const id = r.id as string | undefined
+  if (!id) return null
+  const status = (r.validationStatus ?? r.validation_status ?? r.status ?? 'en_attente') as Validation
+  return { id, name: String(r.name ?? ''), type: (r.type ?? 'hopital') as InstType, validationStatus: status }
+}
+
+async function toMe(u: LoginUser): Promise<Me> {
+  let institution = normInstitution(u.institution)
+  if (!institution && u.institutionId) {
+    try { institution = normInstitution(await api<unknown>(`/institutions/${u.institutionId}`)) } catch { /* établissement illisible */ }
+  }
+  return { id: u.id, role: u.role, phone: u.phone, fullName: u.fullName ?? null, status: 'actif', institution }
+}
+
+const saveUser = (u: LoginUser | null) => {
+  if (u) sessionStorage.setItem(USER_KEY, JSON.stringify(u)); else sessionStorage.removeItem(USER_KEY)
+}
+const cachedUser = (): LoginUser | null => {
+  try { return JSON.parse(sessionStorage.getItem(USER_KEY) ?? 'null') } catch { return null }
+}
+export const clearSession = () => { setTokens(null); saveUser(null) }
+
+/** Connexion. Renvoie l'utilisateur si le backend le fournit dans la réponse, sinon null (fetchMe prendra le relais). */
+export async function login(phone: string, password: string): Promise<Me | null> {
   if (USE_MOCK) {
     if (!accounts[phone] || password !== 'Demo1234!') throw new ApiError(401, 'Identifiants incorrects')
     setTokens({ access: `mock:${phone}`, refresh: '' })
-    return
+    return null
   }
-  setTokens(readTokens(await api('/auth/login', { method: 'POST', body: JSON.stringify({ phone, password }) })))
+  const body = await api<{ user?: LoginUser }>('/auth/login', { method: 'POST', body: JSON.stringify({ phone, password }) })
+  const tokens = readTokens(body)
+  if (!tokens.access) throw new ApiError(500, 'Réponse /auth/login inattendue (jeton introuvable) : ' + JSON.stringify(body))
+  setTokens(tokens)
+  if (body.user) { saveUser(body.user); return toMe(body.user) }
+  return null
 }
 
 export async function fetchMe(): Promise<Me> {
@@ -43,7 +77,18 @@ export async function fetchMe(): Promise<Me> {
     if (!m) throw new ApiError(401, 'Session expirée')
     return structuredClone(m)
   }
-  return api<Me>('/users/me') // disponible côté backend (M1) : protégée, tous les rôles
+  try {
+    const raw = await api<LoginUser & { institution?: unknown }>('/users/me')
+    saveUser(raw)
+    return toMe(raw)
+  } catch (err) {
+    // Route /users/me absente (404/501) : on retombe sur l'utilisateur reçu au login.
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+      const u = cachedUser()
+      if (u) return toMe(u)
+    }
+    throw err
+  }
 }
 
 export async function declareInstitution(me: Me, d: { name: string; type: InstType; address: string }): Promise<void> {
@@ -51,7 +96,6 @@ export async function declareInstitution(me: Me, d: { name: string; type: InstTy
     accounts[me.phone].institution = { id: `i${Date.now()}`, name: d.name, type: d.type, validationStatus: 'en_attente' }
     return
   }
-  // À CONFIRMER avec openapi.json : corps attendu (name, type, address supposés).
   await api('/institutions', { method: 'POST', body: JSON.stringify(d) })
 }
 
@@ -59,8 +103,7 @@ export async function listPending(): Promise<Pending[]> {
   if (USE_MOCK) {
     return Object.values(accounts).filter((m) => m.institution?.validationStatus === 'en_attente').map((m) => ({
       id: m.institution!.id, name: m.institution!.name, type: m.institution!.type,
-      declarantPhone: m.phone, declarantName: m.fullName,
-      recognized: KNOWN.includes(m.institution!.name),
+      declarantName: m.fullName ?? undefined, declarantPhone: m.phone, recognized: KNOWN.includes(m.institution!.name),
     }))
   }
   return api<Pending[]>('/institutions?validationStatus=en_attente')

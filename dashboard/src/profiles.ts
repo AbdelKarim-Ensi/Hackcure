@@ -33,19 +33,17 @@ export const PROFILES: Record<ProfileKey, { label: string; org: string; tagline:
 
 // Le type d'établissement prime sur le rôle : le compte Croissant-Rouge a le rôle `crt`
 // mais doit afficher le profil `croissant_rouge`.
-export function profileFor(role: string, institutionType?: string | null): ProfileKey {
-  if (institutionType === 'croissant_rouge') return 'croissant_rouge'
-  if (institutionType === 'centre_transfusion') return 'centre_transfusion'
-  if (institutionType === 'banque_sang') return 'banque_sang'
-  if (institutionType === 'hopital') return 'hopital'
-  // Pas d'établissement (ou type inconnu) : repli sur le rôle du compte.
+export function profileFor(role: string, institutionType?: string): ProfileKey {
   if (role === 'crt') return 'centre_transfusion'
-  return 'hopital'
+  if (institutionType === 'croissant_rouge') return 'croissant_rouge'
+  return institutionType === 'banque_sang' ? 'banque_sang' : 'hopital'
 }
 
 export const ProfileCtx = createContext<{
   profile: ProfileKey
   setProfile: (p: ProfileKey) => void
-  orgName?: string // nom réel de l'établissement (mode réel)
-}>({ profile: 'hopital', setProfile: () => {} })
+  orgName?: string // nom réel de l'établissement connecté ; absent si le sélecteur de démo change de profil
+}>({
+  profile: 'hopital', setProfile: () => {},
+})
 export const useProfile = () => useContext(ProfileCtx)
