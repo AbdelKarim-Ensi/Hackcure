@@ -1,15 +1,29 @@
+export interface NotifPrefs {
+    alertsEnabled?: boolean;
+    quietHours?: {
+        start: string;
+        end: string;
+    };
+}
+
 export interface DonorProfile {
-    userId: string;
-    fullName: string;
-    phone: string;
-    bloodGroup: string;
-    eligibilityStatus: 'eligible' | 'temporaire' | 'definitif' | 'en_attente';
-    nextDonationPossibleDate: string;
-    position: {
+    id?: string;
+    fullName?: string;
+    phone?: string;
+    bloodGroup?: string;
+    bloodGroupConfirmed?: boolean; // 👈 Propriété ajoutée
+    sex?: 'homme' | 'femme' | string;
+    zone?: string;
+    maxRadiusKm?: number;
+    available?: boolean;
+    lastDonationDate?: string;
+    nextDonationPossibleDate?: string;
+    reevalDate?: string;
+    notifPrefs?: NotifPrefs;
+    position?: {
         latitude: number;
         longitude: number;
     };
-    zone: string;
 }
 
 export interface EventSlot {
@@ -19,11 +33,11 @@ export interface EventSlot {
 
 export interface BloodEvent {
     id: string;
-    organizerId: string;
+    organizerId?: string;
     title: string;
     placeName: string;
     address: string;
-    position: {
+    position?: {
         latitude: number;
         longitude: number;
     };
@@ -33,7 +47,7 @@ export interface BloodEvent {
     registeredCount: number;
     targetGroups: string[];
     conditions?: string;
-    status: 'publie' | 'annule' | 'termine';
+    status: 'publie' | 'annule' | string;
     distanceKm?: number;
 }
 
@@ -42,6 +56,6 @@ export interface EventRegistrationResponse {
     eventId: string;
     donorId: string;
     slot: string;
-    status: string;
+    status: 'inscrit' | 'present' | 'don_effectue' | 'annule';
     qrToken: string;
 }
