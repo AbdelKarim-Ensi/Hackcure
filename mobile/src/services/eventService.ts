@@ -138,7 +138,7 @@ export const getUpcomingEvents = async (
 };
 
 /**
- * 🎯 Inscription à une collecte + enregistrement immédiat dans l'historique
+ * 🎯 Inscription à une collecte + enregistrement immédiat dans l'historique spécifique à l'utilisateur
  */
 export const registerToEvent = async (
     token: string,
@@ -156,7 +156,7 @@ export const registerToEvent = async (
         );
         registrationData = response.data;
     } catch (e: any) {
-        // Mock de secours si le backend retourne une erreur en mode test
+        // Fallback si l'API est indisponible
         registrationData = {
             id: `reg-${Date.now()}`,
             eventId,
@@ -167,9 +167,13 @@ export const registerToEvent = async (
         };
     }
 
-    // 🔥 Mise à jour du cache de l'historique dans AsyncStorage
+    // 🔒 Clé d'historique propre à l'utilisateur connecté
     try {
-        const historyStr = await AsyncStorage.getItem('user_registrations');
+        const profileStr = await AsyncStorage.getItem('user_profile');
+        const profile = profileStr ? JSON.parse(profileStr) : null;
+        const userKey = profile?.phone ? `user_registrations_${profile.phone}` : 'user_registrations';
+
+        const historyStr = await AsyncStorage.getItem(userKey);
         const history: RegistrationHistoryItem[] = historyStr ? JSON.parse(historyStr) : [];
 
         const newItem: RegistrationHistoryItem = {
@@ -188,9 +192,8 @@ export const registerToEvent = async (
             },
         };
 
-        // Évite les doublons
         const updatedHistory = [newItem, ...history.filter(item => item.eventId !== eventId)];
-        await AsyncStorage.setItem('user_registrations', JSON.stringify(updatedHistory));
+        await AsyncStorage.setItem(userKey, JSON.stringify(updatedHistory));
     } catch (err) {
         console.log('Erreur sauvegarde historique local:', err);
     }
@@ -199,11 +202,20 @@ export const registerToEvent = async (
 };
 
 /**
- * 🎯 Récupère l'historique des participations
+ * 🎯 Récupère l'historique propre à l'utilisateur actuellement connecté
  */
 export const getUserRegistrations = async (): Promise<RegistrationHistoryItem[]> => {
     try {
-        const historyStr = await AsyncStorage.getItem('user_registrations');
+        const profileStr = await AsyncStorage.getItem('user_profile');
+        const profile = profileStr ? JSON.parse(profileStr) : null;
+
+        if (!profile?.phone) {
+            return [];
+        }
+
+        const userKey = `user_registrations_${profile.phone}`;
+        const historyStr = await AsyncStorage.getItem(userKey);
+
         if (historyStr) {
             return JSON.parse(historyStr);
         }
@@ -211,4 +223,87 @@ export const getUserRegistrations = async (): Promise<RegistrationHistoryItem[]>
         console.error('Erreur lecture historique:', err);
     }
     return [];
+};
+
+
+
+export interface ApiNotification {
+    id: string;
+    type: string;
+    status: string;
+    payload?: {
+        requestId?: string;
+        bloodGroup?: string;
+        hospitalName?: string;
+        distanceKm?: number;
+        urgency?: string;
+        title?: string;
+        message?: string;
+    };
+    createdAt: string;
+    sentAt?: string;
+}
+
+/**
+ * 🔔 Récupère la liste des notifications réelles de l'utilisateur connecté
+ */
+export const getUserNotifications = async (token: string): Promise<ApiNotification[]> => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/notifications/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error: any) {
+        console.error('Erreur chargement /notifications/me:', error?.message);
+        return [];
+    }
+};
+
+export interface UrgentRequestItem {
+    id: string;
+    institutionId?: string;
+    institutionName: string;
+    bloodGroup: string;
+    quantity: number;
+    urgency: string;
+    status: string;
+    currentRadiusKm?: number;
+    createdAt?: string;
+}
+
+/**
+ * 🚨 Récupère les demandes d'urgence actives créées par les hôpitaux (ex: Hôpital Charles Nicolle)
+ */
+export const getActiveUrgentRequests = async (token: string): Promise<UrgentRequestItem[]> => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/requests`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { status: 'active' },
+        });
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error: any) {
+        console.log('Erreur /requests:', error?.message);
+        return [];
+    }
+};
+
+/**
+ * 🚑 Répondre à une alerte d'urgence d'hôpital ("Je viens")
+ */
+export const respondToUrgentRequest = async (
+    token: string,
+    requestId: string,
+    responseValue: 'je_viens' | 'je_ne_peux_pas' = 'je_viens'
+): Promise<any> => {
+    try {
+        const response = await axios.post(
+            `${API_BASE_URL}/requests/${requestId}/respond`,
+            { response: responseValue },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        return response.data;
+    } catch (error: any) {
+        console.error('Erreur réponse alerte urgence:', error?.message);
+        throw error;
+    }
 };
