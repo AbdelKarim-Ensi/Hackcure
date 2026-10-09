@@ -2,10 +2,12 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
 import { UserRole } from '../database/enums';
 
+// AJOUT : PHONE_RE accepte déjà les fixes tunisiens (+21671xxxxxx ou 71xxxxxx), pas seulement les mobiles.
 const PHONE_RE = /^\+?[0-9]{8,15}$/;
 
 export class RegisterDto {
-  @ApiProperty({ example: '+21612345678', description: 'Numéro de téléphone (identifiant de connexion)' })
+  // AJOUT : description mise à jour (fixe accepté pour hopital/crt)
+  @ApiProperty({ example: '+21612345678', description: 'Numéro de téléphone (identifiant de connexion). Fixe tunisien accepté, ex. +21671123456 (comptes hopital et crt).' })
   @IsString() @Matches(PHONE_RE, { message: 'phone must be a valid phone number' })
   phone!: string;
 
@@ -28,7 +30,8 @@ export class RegisterDto {
 
 export class RegisterResponseDto {
   @ApiProperty({ example: '3f1c7a52-8d0e-4b8a-9a55-1c2d3e4f5a61' }) userId!: string;
-  @ApiProperty({ example: true, description: 'Un code OTP a été envoyé par SMS' }) otpSent!: boolean;
+  // AJOUT : otpSent=false pour hopital/crt (pas d'OTP, le compte peut se connecter tout de suite)
+  @ApiProperty({ example: true, description: "Un code OTP a été envoyé par SMS. false pour les comptes hopital et crt : pas d'OTP, la confiance vient de la validation admin, le compte peut se connecter tout de suite." }) otpSent!: boolean;
   @ApiPropertyOptional({ example: '123456', description: 'Renvoyé uniquement en mode démo (OTP_DEV_MODE=true), jamais en production' })
   devOtp?: string;
 }

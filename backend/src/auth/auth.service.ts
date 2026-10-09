@@ -35,6 +35,8 @@ export class AuthService {
     if (await this.users.exists({ where: { phone: dto.phone } })) {
       throw new BadRequestException('Téléphone déjà utilisé');
     }
+    // AJOUT : hopital/crt n'ont qu'un fixe : pas d'OTP, la confiance vient de la validation admin de l'établissement
+    const skipOtp = dto.role === UserRole.Hopital || dto.role === UserRole.Crt;
     const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
     let user: User;
     try {
@@ -44,13 +46,16 @@ export class AuthService {
           passwordHash,
           fullName: dto.fullName ?? null,
           role: dto.role ?? UserRole.Donneur,
-          phoneVerified: false,
+          // AJOUT : phoneVerified = skipOtp (valeur d'origine : false)
+          phoneVerified: skipOtp,
         }),
       );
     } catch (e: any) {
       if (e?.code === '23505') throw new BadRequestException('Téléphone déjà utilisé');
       throw e;
     }
+    // AJOUT : compte hopital/crt utilisable tout de suite (login), accès limité par InstitutionValidatedGuard
+    if (skipOtp) return { userId: user.id, otpSent: false };
     const code = await this.otp.issue(dto.phone);
     return { userId: user.id, otpSent: true, ...(this.devMode ? { devOtp: code } : {}) };
   }

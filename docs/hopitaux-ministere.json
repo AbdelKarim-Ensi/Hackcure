@@ -1,0 +1,490 @@
+{
+  "meta": {
+    "source": "Ministère de la Santé - annuaire des hôpitaux régionaux (https://santetunisie.rns.tn/fr/component/hopitauxregionaux/?idg=100)",
+    "transcritLe": "2026-10-04",
+    "complet": false,
+    "note": "Transcription partielle faite à partir de captures d'écran : 20 hôpitaux. La liste complète compte plusieurs pages de 15 hôpitaux (paramètre start). À compléter avant de remplacer les hôpitaux déduits du référentiel.",
+    "conventionUrgence": "Les numéros d'urgence abrégés (ex. « 75.490.027 / 461 ») sont développés en remplaçant les 3 derniers chiffres ; le texte d'origine reste dans urgenceBrut."
+  },
+  "hopitaux": [
+    {
+      "code": "MS-KSAR-HELLAL",
+      "nomOfficiel": "HR HAJ ALI SOUA KSAR HELLAL",
+      "nom": "Hôpital régional Haj Ali Soua, Ksar Hellal",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Monastir",
+      "gouvernoratDeduit": true,
+      "adresse": "Avenue HAJ ALI SOUA - KSAR HELLAL - 5070",
+      "telephones": [
+        "73476054"
+      ],
+      "fax": [
+        "73476054"
+      ],
+      "urgenceBrut": "73.476.275 / 73.475.214",
+      "urgence": [
+        "73476275",
+        "73475214"
+      ],
+      "structureCode": null,
+      "lienBase": null,
+      "remarques": []
+    },
+    {
+      "code": "MS-KERKENNAH",
+      "nomOfficiel": "HR DE KERKENNAH",
+      "nom": "Hôpital régional de Kerkennah",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Sfax",
+      "gouvernoratDeduit": true,
+      "adresse": "KERKENNAH - 3070",
+      "telephones": [
+        "74281119"
+      ],
+      "fax": [
+        "74281119"
+      ],
+      "urgenceBrut": "74.481.052 / 119",
+      "urgence": [
+        "74481052",
+        "74481119"
+      ],
+      "structureCode": null,
+      "lienBase": null,
+      "remarques": []
+    },
+    {
+      "code": "MS-GAFSA",
+      "nomOfficiel": "HR HOUCINE BOUZAIENE DE GAFSA",
+      "nom": "Hôpital régional Houcine Bouzaiene, Gafsa",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Gafsa",
+      "gouvernoratDeduit": false,
+      "adresse": "Doualy GAFSA - 2100",
+      "telephones": [
+        "76226278"
+      ],
+      "fax": [
+        "76226278"
+      ],
+      "urgenceBrut": "76.225.055 / 76.226.300",
+      "urgence": [
+        "76225055",
+        "76226300"
+      ],
+      "structureCode": "CRTS-GAFSA",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-TOZEUR",
+      "nomOfficiel": "HR DE TOZEUR",
+      "nom": "Hôpital régional de Tozeur",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Tozeur",
+      "gouvernoratDeduit": false,
+      "adresse": "TOZEUR - 2200",
+      "telephones": [
+        "76453400"
+      ],
+      "fax": [
+        "76453400"
+      ],
+      "urgenceBrut": "76.453.400",
+      "urgence": [
+        "76453400"
+      ],
+      "structureCode": "BS-TOZEUR",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-SIDI-BOUZID",
+      "nomOfficiel": "HR DE SIDI BOUZID",
+      "nom": "Hôpital régional de Sidi Bouzid",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Sidi Bouzid",
+      "gouvernoratDeduit": false,
+      "adresse": "SIDI BOUZID - 9100",
+      "telephones": [
+        "76632175"
+      ],
+      "fax": [
+        "76632175"
+      ],
+      "urgenceBrut": "76.632.500",
+      "urgence": [
+        "76632500"
+      ],
+      "structureCode": "BS-SIDI-BOUZID",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-GABES",
+      "nomOfficiel": "HR MOHAMED BEN SASSI DE GABES",
+      "nom": "Hôpital régional Mohamed Ben Sassi, Gabès",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Gabès",
+      "gouvernoratDeduit": false,
+      "adresse": "Mtrorrech - GABES",
+      "telephones": [
+        "75282530"
+      ],
+      "fax": [
+        "75282530"
+      ],
+      "urgenceBrut": "75.282.700",
+      "urgence": [
+        "75282700"
+      ],
+      "structureCode": "CRTS-GABES",
+      "lienBase": "ville",
+      "remarques": [
+        "Le numéro d'urgence du ministère diffère de celui du CRTS de Gabès (CNTS) : lien établi par la ville seulement."
+      ]
+    },
+    {
+      "code": "MS-KEBILI",
+      "nomOfficiel": "HR DE KEBILI",
+      "nom": "Hôpital régional de Kébili",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Kébili",
+      "gouvernoratDeduit": false,
+      "adresse": "KEBILI - 4200",
+      "telephones": [
+        "75490210"
+      ],
+      "fax": [
+        "75490210"
+      ],
+      "urgenceBrut": "75.490.027 / 461",
+      "urgence": [
+        "75490027",
+        "75490461"
+      ],
+      "structureCode": "BS-KEBILI",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-MEDENINE",
+      "nomOfficiel": "HR HABIB BOURGUIBA DE MEDENINE",
+      "nom": "Hôpital régional Habib Bourguiba, Médenine",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Médenine",
+      "gouvernoratDeduit": false,
+      "adresse": "MEDENINE - 4100",
+      "telephones": [
+        "75640044"
+      ],
+      "fax": [
+        "75640044"
+      ],
+      "urgenceBrut": "75.640.044",
+      "urgence": [
+        "75640044"
+      ],
+      "structureCode": "BS-MEDENINE",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-JERBA",
+      "nomOfficiel": "HR SADOK MOKADEM DE JERBA",
+      "nom": "Hôpital régional Sadok Mokadem, Jerba",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Médenine",
+      "gouvernoratDeduit": true,
+      "adresse": "HOUMT ESSOUK - JERBA",
+      "telephones": [
+        "75650160"
+      ],
+      "fax": [
+        "75650160"
+      ],
+      "urgenceBrut": "75.650.018",
+      "urgence": [
+        "75650018"
+      ],
+      "structureCode": "BS-JERBA",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-KHEREDDINE",
+      "nomOfficiel": "HR DE KHEREDDINE",
+      "nom": "Hôpital régional de Khereddine",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Tunis",
+      "gouvernoratDeduit": true,
+      "adresse": "16, rue Imam El Ghazal - KHEREDDINE",
+      "telephones": [
+        "71731860"
+      ],
+      "fax": [
+        "71734864"
+      ],
+      "urgenceBrut": "71.730.100 / 71.730.964",
+      "urgence": [
+        "71730100",
+        "71730964"
+      ],
+      "structureCode": null,
+      "lienBase": null,
+      "remarques": []
+    },
+    {
+      "code": "MS-MENZEL-BOURGUIBA",
+      "nomOfficiel": "HR MENZEL BOURGUIBA",
+      "nom": "Hôpital régional de Menzel Bourguiba",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Bizerte",
+      "gouvernoratDeduit": false,
+      "adresse": "Menzel Bourguiba, Bizerte",
+      "telephones": [
+        "72460284"
+      ],
+      "fax": [
+        "72464411"
+      ],
+      "urgenceBrut": "72.460.455 / 014 / 690 / 520 / 560",
+      "urgence": [
+        "72460455",
+        "72460014",
+        "72460690",
+        "72460520",
+        "72460560"
+      ],
+      "structureCode": "BS-MENZEL-BOURGUIBA",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-NABEUL-TLETELI",
+      "nomOfficiel": "HR AHMED TLETELI NABEUL",
+      "nom": "Hôpital régional Ahmed Tleteli, Nabeul",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Nabeul",
+      "gouvernoratDeduit": false,
+      "adresse": "Avenue Habib THAMEUR - NABEUL",
+      "telephones": [
+        "72285673"
+      ],
+      "fax": [
+        "72285673"
+      ],
+      "urgenceBrut": "72.285.633",
+      "urgence": [
+        "72285633"
+      ],
+      "structureCode": "BS-NABEUL",
+      "lienBase": "numero",
+      "remarques": [
+        "Nabeul compte deux hôpitaux régionaux ; la banque de sang du CNTS partage le numéro d'urgence de celui-ci."
+      ]
+    },
+    {
+      "code": "MS-NABEUL-MAAMOURI",
+      "nomOfficiel": "HR MED T.MAAMOURI NABEUL",
+      "nom": "Hôpital régional Med T. Maamouri, Nabeul",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Nabeul",
+      "gouvernoratDeduit": false,
+      "adresse": "EL Mrezka - NABEUL",
+      "telephones": [
+        "72285673"
+      ],
+      "fax": [
+        "72285673"
+      ],
+      "urgenceBrut": "72,285,022",
+      "urgence": [
+        "72285022"
+      ],
+      "structureCode": null,
+      "lienBase": null,
+      "remarques": [
+        "Numéro d'urgence écrit avec des virgules dans la source (72,285,022) : interprété comme 72.285.022."
+      ]
+    },
+    {
+      "code": "MS-MENZEL-TEMIME",
+      "nomOfficiel": "HR MENZEL TEMIM",
+      "nom": "Hôpital régional de Menzel Temime",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Nabeul",
+      "gouvernoratDeduit": true,
+      "adresse": "Rue de la Place - MENZEL TEMIME",
+      "telephones": [
+        "72344167"
+      ],
+      "fax": [],
+      "urgenceBrut": null,
+      "urgence": [],
+      "structureCode": "BS-MENZEL-TEMIME",
+      "lienBase": "ville",
+      "remarques": [
+        "Entrée incomplète : fax et numéro d'urgence non visibles sur la capture. Intitulé de la source : « HR MENZEL TEMIM »."
+      ]
+    },
+    {
+      "code": "MS-MAHRES",
+      "nomOfficiel": "HR DE MAHRES",
+      "nom": "Hôpital régional de Mahrès",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Sfax",
+      "gouvernoratDeduit": true,
+      "adresse": "Cité Hachana GP1 - MAHRES - 3060",
+      "telephones": [
+        "74290012"
+      ],
+      "fax": [
+        "74290012"
+      ],
+      "urgenceBrut": "74.290.293",
+      "urgence": [
+        "74290293"
+      ],
+      "structureCode": null,
+      "lienBase": null,
+      "remarques": []
+    },
+    {
+      "code": "MS-BIZERTE-BOUGATFA",
+      "nomOfficiel": "HR HABIB BOUGATFA DE BIZERTE",
+      "nom": "Hôpital régional Habib Bougatfa, Bizerte",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Bizerte",
+      "gouvernoratDeduit": false,
+      "adresse": null,
+      "telephones": [],
+      "fax": [],
+      "urgenceBrut": "72.431.422 / 224/775",
+      "urgence": [
+        "72431422",
+        "72431224",
+        "72431775"
+      ],
+      "structureCode": "BS-BIZERTE",
+      "lienBase": "numero",
+      "remarques": [
+        "Adresse, téléphone et fax de la source identiques à ceux de Menzel Bourguiba (erreur probable de la source) : non retenus."
+      ]
+    },
+    {
+      "code": "MS-METLAOUI",
+      "nomOfficiel": "HR DE METLAOUI",
+      "nom": "Hôpital régional de Metlaoui",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Gafsa",
+      "gouvernoratDeduit": true,
+      "adresse": "Route de Tozeur - METLAOUI - 2130",
+      "telephones": [
+        "76241600"
+      ],
+      "fax": [
+        "76241600"
+      ],
+      "urgenceBrut": "76.241.600 / 502",
+      "urgence": [
+        "76241600",
+        "76241502"
+      ],
+      "structureCode": "BS-METLAOUI",
+      "lienBase": "numero",
+      "remarques": []
+    },
+    {
+      "code": "MS-ZARZIS",
+      "nomOfficiel": "HR DE ZARZIS",
+      "nom": "Hôpital régional de Zarzis",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Médenine",
+      "gouvernoratDeduit": true,
+      "adresse": "ZARZIS - 4170",
+      "telephones": [
+        "75680726"
+      ],
+      "fax": [
+        "75680726"
+      ],
+      "urgenceBrut": "75.694.400",
+      "urgence": [
+        "75694400"
+      ],
+      "structureCode": "BS-ZARZIS",
+      "lienBase": "ville",
+      "remarques": [
+        "Le numéro d'urgence du ministère diffère de celui de la banque de sang du CNTS : lien établi par la ville seulement."
+      ]
+    },
+    {
+      "code": "MS-TATAOUINE",
+      "nomOfficiel": "HR DE TATAOUIN",
+      "nom": "Hôpital régional de Tataouine",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Tataouine",
+      "gouvernoratDeduit": false,
+      "adresse": "TATAOUINE - 3200",
+      "telephones": [
+        "75862005"
+      ],
+      "fax": [
+        "75862005"
+      ],
+      "urgenceBrut": "75.870.114 / 690",
+      "urgence": [
+        "75870114",
+        "75870690"
+      ],
+      "structureCode": "BS-TATAOUINE",
+      "lienBase": "numero",
+      "remarques": [
+        "Intitulé de la source : « HR DE TATAOUIN » (faute de frappe)."
+      ]
+    },
+    {
+      "code": "MS-ARIANA",
+      "nomOfficiel": "HR MAHMOUD ELMATRI ARIANA",
+      "nom": "Hôpital régional Mahmoud Elmatri, Ariana",
+      "type": "hopital",
+      "categorie": "HOPITAL_REGIONAL",
+      "gouvernorat": "Ariana",
+      "gouvernoratDeduit": false,
+      "adresse": "Hôpital régional d'Ariana - Tunis",
+      "telephones": [
+        "71821286"
+      ],
+      "fax": [],
+      "urgenceBrut": "71.821.621",
+      "urgence": [
+        "71821621"
+      ],
+      "structureCode": null,
+      "lienBase": null,
+      "remarques": [
+        "Pas de fax dans la source."
+      ]
+    }
+  ]
+}

@@ -1,4 +1,8 @@
 // AJOUT : T3 - squelette du contrôleur events (données mockées, services réels en T6)
+// AJOUT : T6.1 - list, create et getOne branchés sur EventsService.
+// AJOUT : T6.2 - register branché sur EventsService.register.
+// AJOUT : T6.4 - checkin branché sur EventCheckinService.
+// AJOUT : T6.5 - dashboard branché sur EventDashboardService (plus de mock).
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
@@ -10,10 +14,12 @@ import {
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
-import { BloodGroup, EventStatus, RegistrationStatus, UserRole } from '../common/enums';
-import { MOCK_DONOR_POSITION, MOCK_IDS } from '../contract/mocks';
+import { UserRole } from '../common/enums';
+import { MOCK_IDS } from '../contract/mocks';
 import {
   CheckinDto,
   CheckinResultDto,
@@ -24,40 +30,19 @@ import {
   ListEventsQueryDto,
   RegisterEventDto,
 } from './dto/events.dto';
-
-const mockEvent = (id: string = MOCK_IDS.event): EventDto => ({
-  id,
-  organizerId: MOCK_IDS.crtUser,
-  title: 'Collecte de sang - Faculté des Sciences de Tunis',
-  placeName: 'Faculté des Sciences de Tunis',
-  address: 'Campus universitaire, 2092 Tunis',
-  position: MOCK_DONOR_POSITION,
-  eventDate: '2026-10-15',
-  slots: [
-    { time: '09:00', capacity: 20 },
-    { time: '11:00', capacity: 20 },
-    { time: '14:00', capacity: 20 },
-  ],
-  capacity: 60,
-  registeredCount: 12,
-  targetGroups: [BloodGroup.O_NEG, BloodGroup.A_NEG],
-  conditions: "Apporter une pièce d'identité",
-  status: EventStatus.PUBLIE,
-  distanceKm: 4.8,
-});
-
-const mockRegistration = (eventId: string, slot = '09:00'): EventRegistrationDto => ({
-  id: MOCK_IDS.registration,
-  eventId,
-  donorId: MOCK_IDS.donorUser,
-  slot,
-  status: RegistrationStatus.INSCRIT,
-  qrToken: 'signed.qr.token',
-});
+import { EventCheckinService } from './events-checkin.service';
+import { EventDashboardService } from './events-dashboard.service';
+import { EventsService } from './events.service';
 
 @ApiTags('events')
 @Controller('events')
 export class EventsController {
+  constructor(
+    private readonly events: EventsService,
+    private readonly checkinService: EventCheckinService,
+    private readonly dashboardService: EventDashboardService,
+  ) {}
+
   @Get()
   @ApiRoles(UserRole.DONNEUR, UserRole.CRT, UserRole.DIRECTION, UserRole.ADMIN)
   @ApiOperation({
@@ -65,8 +50,8 @@ export class EventsController {
     description: 'Liste filtrable par gouvernorat, date et distance (F4.2).',
   })
   @ApiOkResponse({ type: [EventDto] })
-  list(@Query() _query: ListEventsQueryDto): EventDto[] {
-    return [mockEvent()];
+  list(@Query() query: ListEventsQueryDto): Promise<EventDto[]> {
+    return this.events.list(query);
   }
 
   @Post()
@@ -77,8 +62,8 @@ export class EventsController {
       "Déclenche les notifications de priorité normale aux donneurs éligibles de la zone, sans vagues. L'événement apparaît dans le calendrier en moins de 5 s.",
   })
   @ApiCreatedResponse({ type: EventDto })
-  create(@Body() _dto: CreateEventDto): EventDto {
-    return mockEvent();
+  create(@Body() dto: CreateEventDto, @CurrentUser() user: AuthenticatedUser): Promise<EventDto> {
+    return this.events.create(user.id, dto);
   }
 
   @Get(':id')
@@ -87,8 +72,8 @@ export class EventsController {
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiOkResponse({ type: EventDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  getOne(@Param('id', ParseUUIDPipe) id: string): EventDto {
-    return mockEvent(id);
+  getOne(@Param('id', ParseUUIDPipe) id: string): Promise<EventDto> {
+    return this.events.getOne(id);
   }
 
   @Post(':id/register')
@@ -105,8 +90,12 @@ export class EventsController {
     description: "Donneur non éligible à la date de l'événement",
   })
   @ApiConflictResponse({ type: ErrorResponseDto, description: 'Capacité atteinte ou déjà inscrit' })
-  register(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RegisterEventDto): EventRegistrationDto {
-    return mockRegistration(id, dto.slot);
+  register(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RegisterEventDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<EventRegistrationDto> {
+    return this.events.register(id, dto, user);
   }
 
   @Post(':id/checkin')
@@ -120,12 +109,12 @@ export class EventsController {
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiOkResponse({ type: CheckinResultDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'Inscription introuvable ou jeton invalide' })
-  checkin(@Param('id', ParseUUIDPipe) id: string, @Body() _dto: CheckinDto): CheckinResultDto {
-    return {
-      registration: { ...mockRegistration(id), status: RegistrationStatus.PRESENT },
-      donationId: MOCK_IDS.donation,
-      nextDonationPossibleDate: '2027-01-03',
-    };
+  checkin(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CheckinDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CheckinResultDto> {
+    return this.checkinService.checkin(id, dto, user);
   }
 
   @Get(':id/dashboard')
@@ -133,21 +122,10 @@ export class EventsController {
   @ApiOperation({ summary: "Tableau de bord de l'organisateur" })
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiOkResponse({ type: EventDashboardDto })
-  dashboard(@Param('id', ParseUUIDPipe) id: string): EventDashboardDto {
-    return {
-      eventId: id,
-      registered: 42,
-      present: 35,
-      absent: 7,
-      donations: 33,
-      byBloodGroup: [
-        { bloodGroup: BloodGroup.O_POS, count: 12 },
-        { bloodGroup: BloodGroup.A_POS, count: 9 },
-        { bloodGroup: BloodGroup.B_POS, count: 5 },
-        { bloodGroup: BloodGroup.O_NEG, count: 3 },
-        { bloodGroup: BloodGroup.A_NEG, count: 2 },
-        { bloodGroup: BloodGroup.AB_POS, count: 2 },
-      ],
-    };
+  dashboard(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<EventDashboardDto> {
+    return this.dashboardService.dashboard(id, user);
   }
 }

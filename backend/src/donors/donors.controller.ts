@@ -3,7 +3,10 @@
 import {
   Body,
   Controller,
+  // AJOUT : T7.4
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -14,6 +17,8 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  // AJOUT : T7.4
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -36,6 +41,8 @@ import {
 } from './dto/donors.dto';
 import { DonorsService } from './donors.service';
 import { EligibilityFormService } from './eligibility-form.service';
+// AJOUT : T7.4
+import { DonorErasureService } from './donor-erasure.service';
 
 @ApiTags('donors')
 @Controller('donors')
@@ -44,6 +51,8 @@ export class DonorsController {
     private readonly donors: DonorsService,
     private readonly donations: DonationsService,
     private readonly eligibility: EligibilityFormService,
+    // AJOUT : T7.4
+    private readonly erasure: DonorErasureService,
   ) {}
 
   @Post('register')
@@ -134,6 +143,21 @@ export class DonorsController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<EligibilityResultDto> {
     return this.eligibility.submit(user, id, dto);
+  }
+
+  // AJOUT : T7.4 droit à l'effacement (anonymisation)
+  @Delete('me')
+  @HttpCode(204)
+  @ApiRoles(UserRole.DONNEUR)
+  @ApiOperation({
+    summary: 'Supprimer mon compte (anonymisation)',
+    description:
+      "Supprime formulaires de santé et notifications, efface position, zone et consentement, anonymise le compte. Les dons et réponses passés sont conservés sans identité.",
+  })
+  @ApiNoContentResponse({ description: 'Compte anonymisé' })
+  @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'Profil non créé' })
+  deleteMe(@CurrentUser() user: AuthenticatedUser): Promise<void> {
+    return this.erasure.erase(user.id);
   }
 
   @Get(':id/next-donation-date')

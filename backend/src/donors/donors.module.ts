@@ -8,6 +8,8 @@ import { DonationsModule } from '../donations/donations.module';
 import { DonorsController } from './donors.controller';
 import { DonorsService } from './donors.service';
 import { EligibilityFormService } from './eligibility-form.service';
+// AJOUT : T7.4
+import { DonorErasureService } from './donor-erasure.service';
 
 @Module({
   imports: [
@@ -16,7 +18,9 @@ import { EligibilityFormService } from './eligibility-form.service';
     CryptoModule,
   ],
   controllers: [DonorsController],
-  providers: [DonorsService, EligibilityFormService],
+  // AJOUT : T7.4 DonorErasureService (ligne d'origine gardée en commentaire)
+  // providers: [DonorsService, EligibilityFormService],
+  providers: [DonorsService, EligibilityFormService, DonorErasureService],
   exports: [DonorsService],
 })
 export class DonorsModule {}

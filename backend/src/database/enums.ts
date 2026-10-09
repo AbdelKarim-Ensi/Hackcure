@@ -5,7 +5,8 @@ export enum Sex { Homme = 'homme', Femme = 'femme' }
 export enum EligibilityStatus { EnAttente = 'en_attente', Eligible = 'eligible', Temporaire = 'temporaire', Definitif = 'definitif' }
 export enum DonationType { SangTotal = 'sang_total', Plaquettes = 'plaquettes', Plasma = 'plasma' }
 export enum DonationSource { Urgence = 'urgence', Evenement = 'evenement' }
-export enum InstitutionType { Hopital = 'hopital', BanqueSang = 'banque_sang', CentreTransfusion = 'centre_transfusion' }
+// AJOUT : CroissantRouge (valeurs d'origine : Hopital, BanqueSang, CentreTransfusion)
+export enum InstitutionType { Hopital = 'hopital', BanqueSang = 'banque_sang', CentreTransfusion = 'centre_transfusion', CroissantRouge = 'croissant_rouge' }
 export enum ValidationStatus { EnAttente = 'en_attente', Valide = 'valide', Rejete = 'rejete' }
 export enum UrgencyLevel { Normale = 'normale', Urgente = 'urgente', Critique = 'critique' }
 export enum RequestStatus { EnRevue = 'en_revue', Active = 'active', Couverte = 'couverte', Cloturee = 'cloturee', Expiree = 'expiree' }

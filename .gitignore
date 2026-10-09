@@ -1,7 +1,10 @@
-.env
-node_modules/
-dist/
 coverage/
-*.log
+dist/
 .DS_Store
+.env
+GoogleService-Info.plist
+google-services.json
+*.keystore
+*.log
+node_modules/
 *.tsbuildinfo
