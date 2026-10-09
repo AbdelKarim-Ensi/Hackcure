@@ -137,8 +137,7 @@ async function main() {
       }
     }
 
-    // AJOUT : slots au format EventSlotDto (HH:mm + capacity), requis par RegisterEventDto et events.service
-    // 2 événements CRT simulés
+  
     await m.query(
       `INSERT INTO events (organizer_id, title, place_name, address, position, event_date, slots, capacity, conditions)
        VALUES
