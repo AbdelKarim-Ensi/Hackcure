@@ -1,4 +1,4 @@
-"""Guardrails (français + arabe). Exécutés AVANT la recherche et tout LLM.
+"""Guardrails (français + arabe + darija). Exécutés AVANT la recherche et tout LLM.
 
 Ordre dans /chat :
     1. check_emergency        -> toujours en premier
@@ -8,7 +8,13 @@ Ordre dans /chat :
 
 Les motifs des deux langues sont testés quelle que soit la langue demandée
 (un message arabe peut arriver avec language="fr"). La langue de la réponse
-est celle demandée / détectée ; le darija utilise pour l'instant le texte arabe.
+est celle demandée / détectée.
+
+Darija : deux familles de motifs.
+  - écriture arabe (« نحب نموت ») : testée sur le texte normalisé, comme l'arabe ;
+  - lettres latines / arabizi (« 3andi wja3 fil sder ») : testée sur un « squelette »
+    (voir skeleton()) où les voyelles sont retirées, car l'arabizi n'a pas d'orthographe fixe.
+    Liste de départ, à enrichir avec de vrais messages d'utilisateurs.
 """
 import re
 import unicodedata
@@ -28,6 +34,11 @@ EMERGENCY = {
         "أو توجّه فورًا إلى أقرب قسم للطوارئ. "
         "وإذا كان معك شخص آخر، اطلب منه البقاء بجانبك."
     ),
+    "darija": (
+        "الحالة هذي ممكن تكون استعجالية. ما تستناش: اتصل بالسامو (SAMU) على 190 "
+        "وإلا امشي توا لأقرب مستعجلات. "
+        "وإذا فما شخص معاك، قلّو يبقى حذاك."
+    ),
 }
 
 MEDICAL_ADVICE = {
@@ -41,6 +52,11 @@ MEDICAL_ADVICE = {
         "بخصوص حالتك، تحدّث إلى طبيب أو صيدلي. "
         "يمكنني فقط تقديم معلومات عامة موثّقة على المنصة."
     ),
+    "darija": (
+        "ما نجمش نعطي نصيحة طبية خاصة بيك، ولا تشخيص، ولا نحدد الجرعات. "
+        "بالنسبة لحالتك، حكي مع طبيب وإلا صيدلي. "
+        "نجم برك نعطيك معلومات عامة موثّقة على المنصة."
+    ),
 }
 
 OFF_TOPIC = {
@@ -49,10 +65,10 @@ OFF_TOPIC = {
         "Pouvez-vous reformuler votre question ?"
     ),
     "ar": "يمكنني فقط الإجابة عن الأسئلة المتعلقة بهذه المنصة. هل يمكنك إعادة صياغة سؤالك؟",
+    "darija": "نجم نجاوب برك على الأسئلة المتعلقة بالمنصة هذي. تنجم تعاود تكتب سؤالك بطريقة أخرى؟",
 }
 
-# darija = texte arabe pour l'instant (étape darija plus tard)
-_ANSWER_LANG = {"fr": "fr", "ar": "ar", "darija": "ar"}
+_ANSWER_LANG = {"fr": "fr", "ar": "ar", "darija": "darija"}
 
 
 def _pick(texts: dict, language: str) -> str:
@@ -74,6 +90,21 @@ def normalize(text: str) -> str:
     text = re.sub(r"[’'`´]", " ", text)
     text = re.sub(r"[^\w\s]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def skeleton(text: str) -> str:
+    """Squelette de l'arabizi : voyelles retirées, lettres doublées réduites, chiffres gardés.
+    « 3andi wja3 fil sder » et « 3andi wje3 fi sdri » -> « 3nd wj3 fl sdr » / « 3nd wj3 f sdr »."""
+    out = []
+    for tok in normalize(text).split():
+        if not tok.isascii():
+            out.append(tok)
+            continue
+        tok = re.sub(r"[aeiouy]", "", tok)
+        tok = re.sub(r"(.)\1+", r"\1", tok)
+        if tok:
+            out.append(tok)
+    return " ".join(out)
 
 
 # --- Motifs (appliqués sur le texte NORMALISÉ) --------------------------------
@@ -143,8 +174,61 @@ MEDICAL_ADVICE_PATTERNS_AR = [
     r"حامل.{0,40}(هل\s+يمكنني|هل\s+استطيع|اتناول|اخذ)",
 ]
 
-_EMERGENCY_RE = [re.compile(p) for p in EMERGENCY_PATTERNS_FR + EMERGENCY_PATTERNS_AR]
-_MEDICAL_RE = [re.compile(p) for p in MEDICAL_ADVICE_PATTERNS_FR + MEDICAL_ADVICE_PATTERNS_AR]
+# Darija en lettres arabes (texte normalisé). Mots tunisiens : نموت، وجيعه، نتنفس، غمي عليه، سامو…
+EMERGENCY_PATTERNS_DARIJA = [
+    r"(وجيعه|وجع|توجعني|توجع)\s+(\w+\s+)?(في\s+|ب)?(ال)?(صدر|قلب)",
+    r"(صدر|قلب)\w*\s+(\w+\s+)?(يوجع|توجع|يتوجع|يضرب\s+بسرعه)",
+    r"ما\s*(نجمش|نجم|نقدرش|نقدر|عادش|نيش\s+قادر\w*|نيش)\s+(علي\s+)?(ن)?تنفس",
+    r"مانيش\s+قادر\w*\s+(ن)?تنفس",
+    r"نتخنق|تخنقت|نختنق|ضيق\s+نفس|نفسي\s+(ضايق|مقطوع)",
+    r"غمي\s+علي|طاح\w*\s+.{0,20}(ما\s+يتحرك|ما\s+يجاوب)|ما\s+(يتحركش|يجاوبش|يفيقش|تفيقش|تتحركش)",
+    r"(الدم|دم)\s+(يسيل|يخرج|ما\s+يوقفش|ما\s+يتوقفش)|ما\s+يوقفش\s+(ال)?دم|ينزف\s+بزاف",
+    r"(بلع|شرب|اكل)\w*\s+.{0,25}(سم|منظف|جافيل|كلور|دوا\s+بزاف|ادويه\s+بزاف|حبوب\s+بزاف)",
+    r"(راه\w*|باش|بش|قربت)\s+(ي|ت|ن)موت|\bنموت\b(?!\s+(علي|ب))",
+    r"نحب\s+نموت|نحب\s+نقتل|نقتل\s+روحي|نموت\s+روحي|نحب\s+ننهي\s+حياتي",
+    r"ما(\s+عادش)?\s*نحب(ش)?\s+نعيش|تعبت\s+من\s+(ال)?حياه|زهقت\s+من\s+(ال)?حياه",
+    r"سامو|الحقوني|عاونوني|ساعدوني",
+]
+
+MEDICAL_ADVICE_PATTERNS_DARIJA = [
+    r"(شنوه|شنو|شنوا)\s+(ال)?(دوا|دواء|علاج|نشرب|ناخذ|نخذ)",
+    r"قداش\s+(من\s+)?(حبه|حبايه|حبات|قرص|مغ|ملغ|قطره|قطرات|جرعه|كبسوله)",
+    r"نجم\s+(نشرب|ناخذ|نخذ)\s+.{0,25}(دوا|دواء|ادويه|حبوب|حبه|مضاد|باراسيتامول|ابوبروفان|اسبرين|انسولين|كورتيزون|فيتامين)",
+    r"نجم\s+(نوقف|نبدل|نزيد|ننقص)\s+(ال)?(دوا|دواء|علاج|ادويه)",
+    r"(عندي|نحس|نعاني)\s*.{0,30}(وجيعه|وجع|سخانه|سخون|حمي|دوخه|دوار|غثيان|سعال|كحه|اسهال|صداع|حراره|طفح|بوحمرون)",
+    r"(راسي|كرشي|بطني|ظهري|رجلي|يدي|عيني|ودني|ضرسي)\s+(\w+\s+)?(يوجع|توجع)",
+    r"(ولدي|بنتي|طفلي|بيبي|بوي|امي|خويا|اختي|زوجي|مراتي)\s+.{0,30}(سخانه|حمي|وجيعه|وجع|كحه|سعال|يرجع|اسهال)",
+    r"شنوه\s+(الي\s+)?عندي|شنوه\s+(ال)?مرض|شنوه\s+مرضي",
+    r"(عندي|عندو|عندها|مصاب|مريض)\s+.{0,20}(السكر|الضغط|سرطان|الايدز|السيدا|الكبد)",
+    r"(هذا|هاذا|هاذي|هذي|هو|هي)\s+(خطير|خطيره)|خطير\s+(ولا|والا)\s+لا",
+    r"حامل.{0,40}(نجم|ناخذ|نشرب)\s+.{0,20}(دوا|حبه|مضاد|علاج)",
+]
+
+# Arabizi (testé sur skeleton(), donc sans voyelles) : 3andi wja3 fil sder -> « 3nd wj3 fl sdr »
+EMERGENCY_PATTERNS_ARABIZI = [
+    r"\b(w?j3)\s+(\w+\s+)?(f\w*\s+)?(sdr|9lb|qlb|glb)",          # wja3 fil sder / 9alb
+    r"\bm\w*\s+(\w+\s+)?\w*tnfs",                                 # ma nnajemch netnafes
+    r"5n9|khn9|5nk|khnk",                                         # net5ane9 (je m'étouffe)
+    r"\bnmt\b|\bn9tl\s+r7|\b(nhb|nbgh)\s+n9tl",                   # nmout / n9tel rou7i
+    r"\bm\w*\s+(\w+\s+)?nhb\w*\s+n3(ch|sh)\b",                    # ma nhebch n3ich
+    r"\b(gh|8)m\w*\s+3l\w*",                                      # ghma 3lih
+    r"\bm\s+(t7rk|jwb|f9)\w*",                                    # ma yet7arekch / yjawebch / yfi9ch
+]
+
+MEDICAL_ADVICE_PATTERNS_ARABIZI = [
+    r"\b3nd\w*\s+(\w+\s+)?(skhn\w*|s5n\w*|7m\w*|wj3|w3j|dkh|dwkh|dw5|s3l|k7\w*|ghth\w*)",
+    r"\bchn\w*\s+(dw|dwa|nkh\w*|n5dh|nchrb|ndw)\b",
+    r"\b9dch\s+mn\s+(7b|kmprm\w*|mg|krs|9rs)",
+    r"\bnjm\w*\s+n\w+\s+(\w+\s+)?(dlprn|prctml|prctm\w*|bprf\w*|sprn|ntbt\w*|dw|kortiz\w*|insul\w*)",
+    r"\b(wld\w*|bnt\w*|tfl|bb)\s+(\w+\s+)?3nd\w*\s+(\w+\s+)?(skhn\w*|s5n\w*|7m\w*|wj3|s3l|k7\w*)",
+    r"\b3nd\w*\s+(\w+\s+)?(cncr|knsr|skr|dbt|tnsn|prsn)",
+    r"\bchnw\s+3nd",
+]
+
+_EMERGENCY_RE = [re.compile(p) for p in EMERGENCY_PATTERNS_FR + EMERGENCY_PATTERNS_AR + EMERGENCY_PATTERNS_DARIJA]
+_MEDICAL_RE = [re.compile(p) for p in MEDICAL_ADVICE_PATTERNS_FR + MEDICAL_ADVICE_PATTERNS_AR + MEDICAL_ADVICE_PATTERNS_DARIJA]
+_EMERGENCY_RE_LATIN = [re.compile(p) for p in EMERGENCY_PATTERNS_ARABIZI]
+_MEDICAL_RE_LATIN = [re.compile(p) for p in MEDICAL_ADVICE_PATTERNS_ARABIZI]
 
 # --- Résultat -------------------------------------------------------------------
 
@@ -166,6 +250,10 @@ def check_emergency(message: str, language: str = "fr") -> GuardrailResult:
     for rx in _EMERGENCY_RE:
         if rx.search(text):
             return GuardrailResult("emergency", _pick(EMERGENCY, language), rx.pattern)
+    skel = skeleton(message)
+    for rx in _EMERGENCY_RE_LATIN:
+        if rx.search(skel):
+            return GuardrailResult("emergency", _pick(EMERGENCY, language), rx.pattern)
     return GuardrailResult()
 
 
@@ -175,6 +263,10 @@ def check_medical_advice(message: str, language: str = "fr") -> GuardrailResult:
     text = normalize(message)
     for rx in _MEDICAL_RE:
         if rx.search(text):
+            return GuardrailResult("medical_advice", _pick(MEDICAL_ADVICE, language), rx.pattern)
+    skel = skeleton(message)
+    for rx in _MEDICAL_RE_LATIN:
+        if rx.search(skel):
             return GuardrailResult("medical_advice", _pick(MEDICAL_ADVICE, language), rx.pattern)
     return GuardrailResult()
 

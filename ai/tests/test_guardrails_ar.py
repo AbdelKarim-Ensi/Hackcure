@@ -72,10 +72,6 @@ def test_no_guardrail_ar(msg):
     assert not check_guardrails(msg, "ar").triggered, msg
 
 
-def test_darija_uses_arabic_text_for_now():
-    assert "طارئة" in check_emergency("نجدة", "darija").answer
-
-
 def test_arabic_message_with_french_language_still_caught():
     r = check_emergency("لا أستطيع التنفس", "fr")
     assert r.reason == "emergency"
