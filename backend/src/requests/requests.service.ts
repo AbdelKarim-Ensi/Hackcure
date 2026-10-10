@@ -18,6 +18,13 @@ import type { DonorEnRouteDto, LiveStateDto, WaveDto } from './dto/requests.dto'
 
 const PG_UNIQUE_VIOLATION = '23505';
 
+// AJOUT : T8 - historique : les demandes terminées disparaissent de la liste après HISTORY_TTL_HOURS (24 par défaut, 12 en démo).
+const TERMINAL_STATUSES = new Set<RequestStatus>([RequestStatus.Couverte, RequestStatus.Cloturee, RequestStatus.Expiree]);
+const historyTtlMs = (): number => {
+  const h = Number(process.env.HISTORY_TTL_HOURS);
+  return (Number.isFinite(h) && h > 0 ? h : 24) * 3_600_000;
+};
+
 @Injectable()
 export class RequestsService {
   /** Horloge injectable pour les tests. */
@@ -145,7 +152,10 @@ export class RequestsService {
     return this.toDto(req);
   }
 
-  /** Hôpital : ses demandes. Direction et admin : toutes. */
+  /**
+   * Hôpital : ses demandes. Direction et admin : toutes.
+   * AJOUT : T8 - les demandes terminées de plus de HISTORY_TTL_HOURS sont masquées (les lignes restent en base).
+   */
   async list(user: AuthenticatedUser, status?: string): Promise<RequestDto[]> {
     const where: Record<string, unknown> = {};
     if (status) where.status = status as RequestStatus;
@@ -153,7 +163,14 @@ export class RequestsService {
       where.institutionId = (await this.institutions.assertHospitalValidated(user.id)).id;
     }
     const rows = await this.requests.find({ where, relations: ['institution'], order: { createdAt: 'DESC' } });
-    return rows.map((r) => this.toDto(r));
+    const now = this.now().getTime();
+    const ttl = historyTtlMs();
+    const visible = rows.filter((r) => {
+      if (!TERMINAL_STATUSES.has(r.status)) return true;
+      const since = new Date(r.closedAt ?? r.createdAt).getTime();
+      return now - since < ttl;
+    });
+    return visible.map((r) => this.toDto(r));
   }
 
   async getOne(id: string, user: AuthenticatedUser): Promise<RequestDto> {
