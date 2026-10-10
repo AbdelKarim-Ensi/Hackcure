@@ -11,8 +11,9 @@ const PHONE_RE = /^\+?[0-9]{8,15}$/;
 const normalizePhone = (value: unknown): unknown => {
   if (typeof value !== 'string') return value;
   const s = value.replace(/[\s.\-()]/g, '');
-  if (/^00/.test(s)) return `+${s.slice(2)}`;
+  // AJOUT : 8 chiffres testés AVANT le préfixe 00 (sinon "00010001" devenait "+010001" -> 400). Ordre d'origine : 00 puis 8 chiffres.
   if (/^[0-9]{8}$/.test(s)) return `+216${s}`;
+  if (/^00/.test(s)) return `+${s.slice(2)}`;
   if (/^216[0-9]{8}$/.test(s)) return `+${s}`;
   return s;
 };
