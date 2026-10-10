@@ -41,6 +41,12 @@ REQ=$(curl -s -X POST "$API/requests" -H "Authorization: Bearer $HT" -H 'Content
   -d "{\"bloodGroup\":\"O+\",\"quantity\":4,\"urgency\":\"urgente\",\"deadline\":\"$DEADLINE\",\"initialRadiusKm\":5}")
 ID=$(echo "$REQ" | json id); [ -n "$ID" ] || { echo "Création échouée : $REQ"; exit 1; }
 echo "   id=$ID statut=$(echo "$REQ" | json status)"
+if [ "$(echo "$REQ" | json status)" = "en_revue" ]; then
+  echo "   retenue par la détection d'anomalies : validation par l'admin"
+  AT=$(token "+21600010100")
+  curl -s -o /dev/null -w '   review approve (%{http_code})\n' -X PATCH "$API/requests/$ID/review" \
+    -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"decision":"approve"}'
+fi
 
 for i in $(seq 1 10); do W1=$(alerted "$ID"); [ -n "$W1" ] && break; sleep 1; done
 [ -n "${W1:-}" ] || { echo "Aucun donneur alerté pour la vague 1 : voir /tmp/api.log"; exit 1; }
