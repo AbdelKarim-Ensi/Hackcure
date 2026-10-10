@@ -30,7 +30,7 @@ def chat(req: ChatRequest) -> ChatResponse:
     language = resolve_language(req.language, req.message)
 
     # 1. Urgence : toujours en premier, avant toute recherche
-    emergency = check_emergency(req.message)
+    emergency = check_emergency(req.message, language)
     if emergency.triggered:
         return ChatResponse(
             answer=emergency.answer,
@@ -55,7 +55,7 @@ def chat(req: ChatRequest) -> ChatResponse:
         )
 
     # 3. Pas de réponse validée : on refuse le conseil médical personnel
-    advice = check_medical_advice(req.message)
+    advice = check_medical_advice(req.message, language)
     if advice.triggered:
         return ChatResponse(
             answer=advice.answer,

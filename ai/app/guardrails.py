@@ -1,48 +1,82 @@
-"""Guardrails (French first). Runs BEFORE knowledge-base search and any LLM.
+"""Guardrails (français + arabe). Exécutés AVANT la recherche et tout LLM.
 
-Usage in /chat:
-    result = check_guardrails(message)
-    if result.triggered:
-        return {"answer": result.answer, "guardrail": result.reason, ...}
-    # else continue with KB search
+Ordre dans /chat :
+    1. check_emergency        -> toujours en premier
+    2. recherche dans la KB   -> si confiante, on répond depuis la KB
+    3. check_medical_advice   -> seulement si la KB n'a rien de sûr
+    4. repli « hors sujet »
+
+Les motifs des deux langues sont testés quelle que soit la langue demandée
+(un message arabe peut arriver avec language="fr"). La langue de la réponse
+est celle demandée / détectée ; le darija utilise pour l'instant le texte arabe.
 """
 import re
 import unicodedata
 from dataclasses import dataclass
 from typing import Optional
 
-# --- Fixed answers (to be reviewed by a medical validator) -------------------
+# --- Réponses fixes (à faire relire par un validateur médical) ----------------
 
-EMERGENCY_FR = (
-    "Cette situation peut être une urgence. N'attendez pas : appelez le SAMU au 190 "
-    "ou rendez-vous immédiatement aux urgences les plus proches. "
-    "Si une autre personne est avec vous, demandez-lui de rester à vos côtés."
-)
+EMERGENCY = {
+    "fr": (
+        "Cette situation peut être une urgence. N'attendez pas : appelez le SAMU au 190 "
+        "ou rendez-vous immédiatement aux urgences les plus proches. "
+        "Si une autre personne est avec vous, demandez-lui de rester à vos côtés."
+    ),
+    "ar": (
+        "قد تكون هذه حالة طارئة. لا تنتظر: اتصل بالإسعاف (SAMU) على الرقم 190 "
+        "أو توجّه فورًا إلى أقرب قسم للطوارئ. "
+        "وإذا كان معك شخص آخر، اطلب منه البقاء بجانبك."
+    ),
+}
 
-MEDICAL_ADVICE_FR = (
-    "Je ne peux pas donner de conseil médical personnalisé, ni de diagnostic ou de dosage. "
-    "Pour votre situation, parlez à un médecin ou à un pharmacien. "
-    "Je peux en revanche vous donner des informations générales validées sur la plateforme."
-)
+MEDICAL_ADVICE = {
+    "fr": (
+        "Je ne peux pas donner de conseil médical personnalisé, ni de diagnostic ou de dosage. "
+        "Pour votre situation, parlez à un médecin ou à un pharmacien. "
+        "Je peux en revanche vous donner des informations générales validées sur la plateforme."
+    ),
+    "ar": (
+        "لا يمكنني تقديم نصيحة طبية شخصية، ولا تشخيص الحالات أو تحديد الجرعات. "
+        "بخصوص حالتك، تحدّث إلى طبيب أو صيدلي. "
+        "يمكنني فقط تقديم معلومات عامة موثّقة على المنصة."
+    ),
+}
 
-OFF_TOPIC_FR = (
-    "Je ne peux répondre qu'aux questions liées à cette plateforme. "
-    "Pouvez-vous reformuler votre question ?"
-)
+OFF_TOPIC = {
+    "fr": (
+        "Je ne peux répondre qu'aux questions liées à cette plateforme. "
+        "Pouvez-vous reformuler votre question ?"
+    ),
+    "ar": "يمكنني فقط الإجابة عن الأسئلة المتعلقة بهذه المنصة. هل يمكنك إعادة صياغة سؤالك؟",
+}
+
+# darija = texte arabe pour l'instant (étape darija plus tard)
+_ANSWER_LANG = {"fr": "fr", "ar": "ar", "darija": "ar"}
+
+
+def _pick(texts: dict, language: str) -> str:
+    return texts[_ANSWER_LANG.get(language, "fr")]
+
 
 # --- Normalisation ------------------------------------------------------------
 
+# NFD + suppression des marques combinantes retire déjà les voyelles courtes et
+# unifie les hamzas (أ إ آ -> ا ; ؤ -> و ; ئ -> ي). Reste : ى, ة, tatweel, chiffres.
+_AR_MAP = str.maketrans({"ى": "ي", "ة": "ه", "ـ": None, "ڨ": "ق", "ڤ": "ف"})
+
 
 def normalize(text: str) -> str:
-    """Lowercase, strip accents, turn apostrophes/punctuation into spaces."""
+    """Minuscules, accents et voyelles arabes retirés, lettres arabes unifiées, ponctuation neutralisée."""
     text = unicodedata.normalize("NFD", text.lower())
     text = "".join(c for c in text if unicodedata.category(c) != "Mn")
+    text = text.translate(_AR_MAP)
     text = re.sub(r"[’'`´]", " ", text)
     text = re.sub(r"[^\w\s]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
-# --- Patterns (applied on normalised text, so no accents) ---------------------
+# --- Motifs (appliqués sur le texte NORMALISÉ) --------------------------------
 
 EMERGENCY_PATTERNS_FR = [
     r"douleur\w* (a|dans) (la |le |ma |mon )?(poitrine|thorax|coeur)",
@@ -78,49 +112,81 @@ MEDICAL_ADVICE_PATTERNS_FR = [
     r"enceinte.{0,40}(puis je|dois je|prendre)",
 ]
 
-_EMERGENCY_RE = [re.compile(p) for p in EMERGENCY_PATTERNS_FR]
-_MEDICAL_RE = [re.compile(p) for p in MEDICAL_ADVICE_PATTERNS_FR]
+# Rappel : ici tout est déjà normalisé -> pas de hamza (ا), ة devient ه, ى devient ي,
+# ئ devient ي (« طوارئ » -> « طواري », « طارئة » -> « طاريه »).
+EMERGENCY_PATTERNS_AR = [
+    r"(الم|وجع)\s+(\w+\s+)?(في\s+|ب)?(ال)?(صدر|قلب)",
+    r"نوبه\s+قلبيه|جلطه|سكته\s+(قلبيه|دماغيه)",
+    r"لا\s+(استطيع|اقدر|اتمكن)\s+(علي\s+)?(ان\s+)?(ال)?(تنفس|اتنفس)",
+    r"لا\s+(ي|ت)تنفس|توقف\w*\s+(عن\s+)?(ال)?تنفس",
+    r"صعوبه\s+(في\s+)?(ال)?تنفس|ضيق\s+(في\s+)?(ال)?(تنفس|نفس)|اختناق|اختنق",
+    r"فقد\w*\s+(لل|ال)?وعي|فاقد\w*\s+(لل|ال)?وعي|اغمي|اغماء|مغمي",
+    r"تشنج|نوبه\s+صرع|صرع",
+    r"نزيف\s+(حاد|شديد|غزير|كبير)|ينزف|تنزف|نزيف\s+لا\s+يتوقف",
+    r"تسمم|جرعه\s+زايده|ابتلع\w*\s+.{0,30}(سم|مواد|منظف|دواء|ادويه|حبوب)",
+    r"حساسيه\s+(شديده|خطيره|حاده)|صدمه\s+(تحسسيه|تاقيه)",
+    r"انتحار|انتحر|اريد\s+(ان\s+)?اموت|اريد\s+الموت|لا\s+اريد\s+(ان\s+)?اعيش",
+    r"اقتل\s+نفسي|انهي\s+حياتي|انهاء\s+حياتي|ا(و)?ذي\s+نفسي",
+    r"حاله\s+طاريه|طواري|اسعاف|نجده|انقذوني|ساعدوني",
+]
 
-# --- Result type ---------------------------------------------------------------
+MEDICAL_ADVICE_PATTERNS_AR = [
+    r"(اي|ما|ماهو|ماهي|ما\s+هو|ما\s+هي)\s+(ال)?(دواء|ادويه|علاج|جرعه|مضاد)",
+    r"كم\s+(جرعه|حبه|حبات|قرص|اقراص|مغ|ملغ|قطره|قطرات|كبسوله)",
+    r"هل\s+(يمكنني|استطيع|يجب\s+علي|ينبغي\s+لي|يجوز\s+لي)\s+(ان\s+)?(اتناول|اخذ|اوقف|ايقاف|اتوقف|اخلط|ازيد|اقلل)",
+    r"هل\s+(هذا\s+|هو\s+|هي\s+|الامر\s+)?(خطير|خطيره)",
+    r"تشخيص|شخص\w*\s+حالت",
+    r"(اعاني\s+من|اشعر|لدي|عندي|اشكو\s+من)\s+.{0,40}(الم|وجع|حمي|حراره|دوار|دوخه|غثيان|سعال|طفح|صداع|اسهال)",
+    r"(لدي|عندي|مصاب|اصبت|اعتقد|اظن).{0,40}(سرطان|سكري|كورونا|كوفيد|التهاب\s+الكبد|ايدز|ورم|اكتئاب)",
+    r"وصفه\s+(طبيه|الطبيب|دواء)|جرعه|جرعات",
+    r"(طفلي|ابني|ابنتي|رضيعي|ابي|امي|زوجي|زوجتي).{0,40}(حمي|حراره|الم|وجع|قيء|سعال|اسهال)",
+    r"حامل.{0,40}(هل\s+يمكنني|هل\s+استطيع|اتناول|اخذ)",
+]
+
+_EMERGENCY_RE = [re.compile(p) for p in EMERGENCY_PATTERNS_FR + EMERGENCY_PATTERNS_AR]
+_MEDICAL_RE = [re.compile(p) for p in MEDICAL_ADVICE_PATTERNS_FR + MEDICAL_ADVICE_PATTERNS_AR]
+
+# --- Résultat -------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class GuardrailResult:
     reason: Optional[str] = None  # "emergency" | "medical_advice" | "off_topic" | None
     answer: Optional[str] = None
-    matched: Optional[str] = None  # pattern that fired (useful for logs/debug)
+    matched: Optional[str] = None  # motif déclencheur (logs / debug)
 
     @property
     def triggered(self) -> bool:
         return self.reason is not None
 
 
-def check_emergency(message: str) -> GuardrailResult:
-    """Run FIRST in /chat, before KB search."""
+def check_emergency(message: str, language: str = "fr") -> GuardrailResult:
+    """À exécuter EN PREMIER dans /chat, avant la recherche."""
     text = normalize(message)
     for rx in _EMERGENCY_RE:
         if rx.search(text):
-            return GuardrailResult("emergency", EMERGENCY_FR, rx.pattern)
+            return GuardrailResult("emergency", _pick(EMERGENCY, language), rx.pattern)
     return GuardrailResult()
 
 
-def check_medical_advice(message: str) -> GuardrailResult:
-    """Run only when the KB has no confident answer (donor eligibility questions
-    like 'puis-je donner si j'ai de la fièvre ?' must reach the KB first)."""
+def check_medical_advice(message: str, language: str = "fr") -> GuardrailResult:
+    """À exécuter seulement si la KB n'a pas de réponse sûre (les questions d'éligibilité
+    du donneur, ex. « puis-je donner si j'ai de la fièvre ? », doivent d'abord atteindre la KB)."""
     text = normalize(message)
     for rx in _MEDICAL_RE:
         if rx.search(text):
-            return GuardrailResult("medical_advice", MEDICAL_ADVICE_FR, rx.pattern)
+            return GuardrailResult("medical_advice", _pick(MEDICAL_ADVICE, language), rx.pattern)
     return GuardrailResult()
 
 
-def check_guardrails(message: str) -> GuardrailResult:
-    """Both checks in order (emergency wins). Handy for tests and quick use."""
-    return check_emergency(message) if check_emergency(message).triggered else check_medical_advice(message)
+def check_guardrails(message: str, language: str = "fr") -> GuardrailResult:
+    """Les deux contrôles dans l'ordre (l'urgence gagne). Pratique pour les tests."""
+    emergency = check_emergency(message, language)
+    return emergency if emergency.triggered else check_medical_advice(message, language)
 
 
-def off_topic_result(best_score: float, threshold: float = 0.35) -> GuardrailResult:
-    """Call after KB search. Adjust threshold using your real search scores."""
+def off_topic_result(best_score: float, threshold: float = 0.35, language: str = "fr") -> GuardrailResult:
+    """Gardé pour compatibilité : /chat utilise déjà is_confident() pour le hors-sujet."""
     if best_score < threshold:
-        return GuardrailResult("off_topic", OFF_TOPIC_FR, f"score<{threshold}")
+        return GuardrailResult("off_topic", _pick(OFF_TOPIC, language), f"score<{threshold}")
     return GuardrailResult()
