@@ -39,12 +39,21 @@ Documentation interactive : http://localhost:8001/docs
 
 `language` : `fr`, `ar`, `darija` ou `auto`. `intent` : `faq`, `escalate`, `out_of_scope`, `emergency` (ou `stub` tant que le moteur n'existe pas).
 
+## Base de connaissances (étape 2)
+
+`data/knowledge_base.json` : 17 questions fréquentes, chacune en français, arabe et darija, avec des mots-clés pour la recherche (étape 3).
+
+- Toutes les entrées sont `validated: false` : textes **provisoires**, à faire relire par un professionnel de santé et un locuteur de chaque langue.
+- Tant qu'une entrée n'est pas validée, son texte ne contient **aucun chiffre** (durées, âges, poids). Un test le vérifie. Les chiffres vivent dans `backend/src/rules/`, et l'application les communique au donneur.
+- Pour valider une entrée : renseigner `source` (document ou personne), puis passer `validated` à `true`. Le chargement refuse une entrée validée sans source.
+- `needs_staff: true` : sujets que le bot ne tranche jamais (maladie chronique, traitement, hépatite, VIH).
+
 ## Feuille de route
 
 | Étape | Contenu | État |
 |---|---|---|
 | 1 | Squelette, contrat d'API, tests | fait |
-| 2 | Base de connaissances (FR / AR / darija, à valider) | à faire |
+| 2 | Base de connaissances (FR / AR / darija, à valider) | fait |
 | 3 | Recherche dans la base | à faire |
 | 4 | Garde-fous : hors sujet, urgence, avis médical personnel | à faire |
 | 5 | Détection de la langue et darija | à faire |

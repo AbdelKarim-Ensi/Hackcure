@@ -1,0 +1,629 @@
+{
+  "version": 1,
+  "note": "Entrées provisoires : aucune n'est validée médicalement. Ne pas passer validated à true sans source.",
+  "entries": [
+    {
+      "id": "eligibilite-generale",
+      "topic": "Qui peut donner son sang",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Qui peut donner son sang ?",
+        "ar": "من يمكنه التبرع بالدم؟",
+        "darija": "شكون ينجم يتبرع بالدم؟"
+      },
+      "answer": {
+        "fr": "Pour donner, il faut être en bonne santé, avoir l'âge et le poids requis, et ne pas être dans une situation qui impose un report. Remplissez le formulaire de l'application : il indique si vous pouvez être alerté. Le personnel médical confirme toujours votre éligibilité le jour du don.",
+        "ar": "للتبرع يجب أن تكون بصحة جيدة وأن تستوفي شرطَي السن والوزن، وألا تكون في حالة تستدعي تأجيل التبرع. املأ استمارة التطبيق لمعرفة ما إذا كان بإمكانك تلقي التنبيهات. ويؤكد الطاقم الطبي أهليتك دائمًا يوم التبرع.",
+        "darija": "باش تتبرع لازم تكون صحتك باهية، وعندك السن والوزن المطلوبين، وما تكونش في حالة تخلي التبرع يتأجل. عمّر الاستمارة في التطبيق باش تعرف تنجم توصلك التنبيهات ولا لا. والفريق الطبي هو اللي يأكد الأهلية نهار التبرع."
+      },
+      "keywords": {
+        "fr": [
+          "donner",
+          "éligible",
+          "conditions",
+          "qui peut",
+          "sang"
+        ],
+        "ar": [
+          "تبرع",
+          "شروط",
+          "أهلية",
+          "من يمكنه"
+        ],
+        "darija": [
+          "نتبرع",
+          "شروط",
+          "شكون ينجم",
+          "أهلية"
+        ]
+      }
+    },
+    {
+      "id": "deroulement-du-don",
+      "topic": "Déroulement du don",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Comment se passe le don ?",
+        "ar": "كيف تتم عملية التبرع؟",
+        "darija": "كيفاش يتعدى التبرع؟"
+      },
+      "answer": {
+        "fr": "À votre arrivée, vous remplissez un questionnaire et rencontrez le personnel médical, qui vérifie que vous pouvez donner. Le prélèvement lui-même est court, puis on vous propose de vous reposer et de boire quelque chose avant de repartir.",
+        "ar": "عند وصولك تملأ استمارة وتلتقي الطاقم الطبي الذي يتأكد من إمكانية تبرعك. عملية سحب الدم نفسها قصيرة، ثم يُطلب منك الاستراحة وشرب شيء قبل المغادرة.",
+        "darija": "كي توصل تعمّر استمارة وتقابل الفريق الطبي اللي يتأكد كان تنجم تتبرع. السحب نفسو قصير، وبعدها تستريح وتشرب حاجة قبل ما تمشي."
+      },
+      "keywords": {
+        "fr": [
+          "déroulement",
+          "comment",
+          "prélèvement",
+          "arrivée"
+        ],
+        "ar": [
+          "كيف",
+          "عملية",
+          "سحب",
+          "خطوات"
+        ],
+        "darija": [
+          "كيفاش",
+          "يتعدى",
+          "سحب",
+          "خطوات"
+        ]
+      }
+    },
+    {
+      "id": "delai-entre-dons",
+      "topic": "Délai entre deux dons",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Tous les combien puis-je donner ?",
+        "ar": "كل كم من الوقت يمكنني التبرع؟",
+        "darija": "كل قدّاش نجم نتبرع؟"
+      },
+      "answer": {
+        "fr": "Un délai minimal est exigé entre deux dons : il est plus long pour le sang total que pour le plasma ou les plaquettes. Votre profil dans l'application affiche la date à partir de laquelle vous pouvez donner à nouveau.",
+        "ar": "يُشترط حدّ أدنى من المدة بين تبرعين، وهي أطول في حالة الدم الكامل منها في حالة البلازما أو الصفائح. يعرض ملفك في التطبيق التاريخ الذي يمكنك فيه التبرع من جديد.",
+        "darija": "لازم تستنى مدة معينة بين تبرع وتبرع، وهي أطول للدم الكامل من البلازما والصفائح. في ملفك في التطبيق تلقى التاريخ اللي تنجم تتبرع فيه من جديد."
+      },
+      "keywords": {
+        "fr": [
+          "délai",
+          "fréquence",
+          "combien de temps",
+          "prochain don",
+          "intervalle"
+        ],
+        "ar": [
+          "مدة",
+          "تكرار",
+          "كل كم",
+          "التبرع المقبل"
+        ],
+        "darija": [
+          "قدّاش",
+          "كل قدّاش",
+          "مدة",
+          "التبرع الجاي"
+        ]
+      }
+    },
+    {
+      "id": "tatouage-piercing",
+      "topic": "Tatouage, piercing, acupuncture",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Puis-je donner si j'ai fait un tatouage ou un piercing ?",
+        "ar": "هل يمكنني التبرع بعد وشم أو ثقب في الجسم؟",
+        "darija": "نجم نتبرع كان درت تاتو ولا بيرسينغ؟"
+      },
+      "answer": {
+        "fr": "Après un tatouage, un piercing ou de l'acupuncture, un délai d'attente est exigé avant de donner. Sa durée est fixée par le centre de transfusion : l'application calcule votre prochaine date possible à partir de vos réponses au formulaire.",
+        "ar": "بعد الوشم أو ثقب الجسم أو الوخز بالإبر يلزم انتظار مدة قبل التبرع. يحدد مركز نقل الدم هذه المدة، ويحسب التطبيق تاريخ تبرعك المقبل انطلاقًا من إجاباتك في الاستمارة.",
+        "darija": "بعد التاتو ولا البيرسينغ ولا الوخز بالإبر لازم تستنى مدة قبل ما تتبرع. مركز نقل الدم هو اللي يحدد المدة، والتطبيق يحسبلك التاريخ الجاي حسب أجوبتك في الاستمارة."
+      },
+      "keywords": {
+        "fr": [
+          "tatouage",
+          "piercing",
+          "acupuncture"
+        ],
+        "ar": [
+          "وشم",
+          "ثقب",
+          "وخز",
+          "إبر"
+        ],
+        "darija": [
+          "تاتو",
+          "بيرسينغ",
+          "وخز"
+        ]
+      }
+    },
+    {
+      "id": "operation-chirurgicale",
+      "topic": "Opération ou endoscopie récente",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "J'ai été opéré récemment, puis-je donner ?",
+        "ar": "خضعت لعملية جراحية مؤخرًا، هل يمكنني التبرع؟",
+        "darija": "درت عملية قريب، نجم نتبرع؟"
+      },
+      "answer": {
+        "fr": "Après une opération ou une endoscopie, un délai d'attente s'applique, qui dépend de l'intervention. Indiquez-le dans le formulaire ; pour un cas particulier, le personnel médical vous répondra.",
+        "ar": "بعد العمليات الجراحية أو التنظير الداخلي يلزم انتظار مدة تختلف باختلاف التدخل. اذكر ذلك في الاستمارة، وفي الحالات الخاصة سيجيبك الطاقم الطبي.",
+        "darija": "بعد العملية ولا التنظير لازم تستنى مدة تتبدل حسب نوع التدخل. قولها في الاستمارة، وكان عندك حالة خاصة الفريق الطبي يجاوبك."
+      },
+      "keywords": {
+        "fr": [
+          "opération",
+          "chirurgie",
+          "endoscopie",
+          "opéré"
+        ],
+        "ar": [
+          "عملية",
+          "جراحية",
+          "تنظير"
+        ],
+        "darija": [
+          "عملية",
+          "جراحة",
+          "تنظير"
+        ]
+      }
+    },
+    {
+      "id": "vaccination",
+      "topic": "Vaccination récente",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Puis-je donner après un vaccin ?",
+        "ar": "هل يمكنني التبرع بعد تلقي لقاح؟",
+        "darija": "نجم نتبرع بعد ما نعمل لقاح؟"
+      },
+      "answer": {
+        "fr": "Après certains vaccins, un court délai peut être demandé selon le type de vaccin. Indiquez votre vaccination récente dans le formulaire ; en cas de doute, demandez au personnel médical.",
+        "ar": "بعد بعض اللقاحات قد تُطلب مدة انتظار قصيرة حسب نوع اللقاح. اذكر لقاحك الأخير في الاستمارة، وعند الشك اسأل الطاقم الطبي.",
+        "darija": "بعد بعض اللقاحات تلزمك تستنى مدة قصيرة حسب نوع اللقاح. قول على اللقاح اللي عملتو في الاستمارة، وكان عندك شك اسأل الفريق الطبي."
+      },
+      "keywords": {
+        "fr": [
+          "vaccin",
+          "vaccination"
+        ],
+        "ar": [
+          "لقاح",
+          "تطعيم"
+        ],
+        "darija": [
+          "لقاح",
+          "تلقيح"
+        ]
+      }
+    },
+    {
+      "id": "fievre-antibiotiques",
+      "topic": "Fièvre, infection, antibiotiques",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Puis-je donner si j'ai eu de la fièvre ou si je prends des antibiotiques ?",
+        "ar": "هل يمكنني التبرع إذا أصبت بحمّى أو كنت أتناول مضادات حيوية؟",
+        "darija": "نجم نتبرع كان عندي سخانة ولا ناخذ في أنتيبيوتيك؟"
+      },
+      "answer": {
+        "fr": "En cas de fièvre, d'infection ou de traitement antibiotique, il faut attendre la guérison, puis un délai avant de donner. Indiquez-le dans le formulaire pour que l'application vous réactive au bon moment.",
+        "ar": "في حالة الحمّى أو العدوى أو العلاج بالمضادات الحيوية يجب انتظار الشفاء ثم مدة إضافية قبل التبرع. اذكر ذلك في الاستمارة ليعيد التطبيق تفعيلك في الوقت المناسب.",
+        "darija": "كان عندك سخانة ولا عدوى ولا تاخذ في أنتيبيوتيك لازم تستنى تبرا وبعدها مدة زيادة قبل ما تتبرع. قولها في الاستمارة باش التطبيق يرجّعك في الوقت المناسب."
+      },
+      "keywords": {
+        "fr": [
+          "fièvre",
+          "infection",
+          "antibiotiques",
+          "malade"
+        ],
+        "ar": [
+          "حمى",
+          "عدوى",
+          "مضادات حيوية",
+          "مريض"
+        ],
+        "darija": [
+          "سخانة",
+          "عدوى",
+          "أنتيبيوتيك",
+          "مريض"
+        ]
+      }
+    },
+    {
+      "id": "voyage-paludisme",
+      "topic": "Voyage en zone à risque",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "J'ai voyagé à l'étranger, puis-je donner ?",
+        "ar": "سافرت إلى الخارج، هل يمكنني التبرع؟",
+        "darija": "سافرت برّا، نجم نتبرع؟"
+      },
+      "answer": {
+        "fr": "Après un séjour dans une zone à risque de paludisme, un délai d'attente est demandé après votre retour. Indiquez-le dans le formulaire.",
+        "ar": "بعد الإقامة في منطقة موبوءة بالملاريا تُطلب مدة انتظار بعد عودتك. اذكر ذلك في الاستمارة.",
+        "darija": "كان قعدت في بلاصة فيها الملاريا لازم تستنى مدة بعد ما ترجع. قولها في الاستمارة."
+      },
+      "keywords": {
+        "fr": [
+          "voyage",
+          "paludisme",
+          "étranger",
+          "zone à risque"
+        ],
+        "ar": [
+          "سفر",
+          "ملاريا",
+          "الخارج"
+        ],
+        "darija": [
+          "سفر",
+          "ملاريا",
+          "برّا"
+        ]
+      }
+    },
+    {
+      "id": "grossesse-allaitement",
+      "topic": "Grossesse et allaitement",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Puis-je donner si je suis enceinte ou si j'allaite ?",
+        "ar": "هل يمكنني التبرع إذا كنت حاملًا أو مرضعة؟",
+        "darija": "نجم نتبرع كان حامل ولا نرضّع؟"
+      },
+      "answer": {
+        "fr": "En principe, le don est reporté pendant la grossesse et après l'accouchement ; le personnel médical précise la situation de l'allaitement. Indiquez-le dans le formulaire : vous pourrez donner de nouveau plus tard.",
+        "ar": "من حيث المبدأ يُؤجَّل التبرع أثناء الحمل وبعد الولادة، ويحدد الطاقم الطبي وضع الإرضاع. اذكري ذلك في الاستمارة وستتمكنين من التبرع لاحقًا.",
+        "darija": "في العادة التبرع يتأجّل وقت الحمل وبعد الولادة، والفريق الطبي يحدد حالة الرضاعة. قولها في الاستمارة وتنجمي تتبرعي بعد."
+      },
+      "keywords": {
+        "fr": [
+          "enceinte",
+          "grossesse",
+          "allaitement",
+          "accouchement"
+        ],
+        "ar": [
+          "حامل",
+          "حمل",
+          "إرضاع",
+          "ولادة"
+        ],
+        "darija": [
+          "حامل",
+          "حمل",
+          "رضاعة",
+          "ولادة"
+        ]
+      }
+    },
+    {
+      "id": "maladie-chronique-traitement",
+      "topic": "Maladie chronique ou traitement régulier",
+      "needs_staff": true,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "J'ai une maladie chronique ou je prends un traitement, puis-je donner ?",
+        "ar": "لدي مرض مزمن أو أتناول علاجًا، هل يمكنني التبرع؟",
+        "darija": "عندي مرض مزمن ولا ناخذ دوا، نجم نتبرع؟"
+      },
+      "answer": {
+        "fr": "Cela dépend de la maladie et du traitement. Seul le personnel médical peut en décider : indiquez-le dans le formulaire et l'équipe médicale examinera votre dossier.",
+        "ar": "يعتمد ذلك على المرض والعلاج، والطاقم الطبي وحده يقرر. اذكر ذلك في الاستمارة وسيدرس الفريق الطبي ملفك.",
+        "darija": "هذا يتوقف على المرض والدوا، والفريق الطبي وحدو اللي يقرر. قولها في الاستمارة والفريق الطبي يشوف ملفك."
+      },
+      "keywords": {
+        "fr": [
+          "maladie chronique",
+          "traitement",
+          "médicament",
+          "diabète"
+        ],
+        "ar": [
+          "مرض مزمن",
+          "علاج",
+          "دواء",
+          "سكري"
+        ],
+        "darija": [
+          "مرض مزمن",
+          "دوا",
+          "سكر",
+          "علاج"
+        ]
+      }
+    },
+    {
+      "id": "hepatite-vih",
+      "topic": "Antécédents d'hépatite ou de VIH",
+      "needs_staff": true,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "J'ai déjà eu une hépatite ou le VIH, puis-je donner ?",
+        "ar": "أُصبت سابقًا بالتهاب الكبد أو فيروس نقص المناعة، هل يمكنني التبرع؟",
+        "darija": "عندي مرض الكبدة ولا السيدا قبل، نجم نتبرع؟"
+      },
+      "answer": {
+        "fr": "Certaines infections, comme l'hépatite B ou C ou le VIH, ne permettent en général pas de donner son sang, afin de protéger les patients. Répondez avec sincérité dans le formulaire : vos réponses sont confidentielles et vues seulement par le personnel médical.",
+        "ar": "بعض الأمراض المعدية مثل التهاب الكبد «ب» أو «ج» أو فيروس نقص المناعة البشرية لا تسمح عادةً بالتبرع، حمايةً للمرضى. أجب بصدق في الاستمارة، فإجاباتك سرية ولا يراها إلا الطاقم الطبي.",
+        "darija": "شوية أمراض معدية كيف الكبدة «ب» ولا «ج» ولا السيدا في العادة ما تخليش تتبرع، باش نحميو المرضى. جاوب بصدق في الاستمارة، أجوبتك سرية ويشوفها برك الفريق الطبي."
+      },
+      "keywords": {
+        "fr": [
+          "hépatite",
+          "vih",
+          "sida",
+          "infection"
+        ],
+        "ar": [
+          "التهاب الكبد",
+          "فيروس",
+          "السيدا",
+          "نقص المناعة"
+        ],
+        "darija": [
+          "الكبدة",
+          "السيدا",
+          "فيروس"
+        ]
+      }
+    },
+    {
+      "id": "groupe-sanguin-inconnu",
+      "topic": "Groupe sanguin inconnu",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Je ne connais pas mon groupe sanguin",
+        "ar": "لا أعرف فصيلة دمي",
+        "darija": "ما نعرفش فصيلة دمي"
+      },
+      "answer": {
+        "fr": "Vous pouvez indiquer votre groupe tel que vous le connaissez dans l'application : il sera confirmé lors de votre premier don. Si vous l'ignorez, une analyse ou votre premier don vous le fera connaître.",
+        "ar": "يمكنك إدخال الفصيلة كما تعرفها في التطبيق وسيتم تأكيدها عند أول تبرع. وإذا كنت لا تعرفها فإن التحليل أو التبرع الأول سيكشفها لك.",
+        "darija": "تنجم تكتب الفصيلة كيما تعرفها في التطبيق وتتأكد في أول تبرع. وكان ما تعرفهاش، التحليل ولا أول تبرع يعرّفك بيها."
+      },
+      "keywords": {
+        "fr": [
+          "groupe sanguin",
+          "ne connais pas",
+          "rhésus"
+        ],
+        "ar": [
+          "فصيلة",
+          "الدم",
+          "لا أعرف"
+        ],
+        "darija": [
+          "فصيلة",
+          "ما نعرفش",
+          "دم"
+        ]
+      }
+    },
+    {
+      "id": "avant-apres-le-don",
+      "topic": "Conseils avant et après le don",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Que faire avant et après le don ?",
+        "ar": "ماذا أفعل قبل التبرع وبعده؟",
+        "darija": "شنوة نعمل قبل التبرع وبعدو؟"
+      },
+      "answer": {
+        "fr": "Avant : mangez normalement, buvez de l'eau, reposez-vous et munissez-vous d'une pièce d'identité. Après : reposez-vous un moment, buvez beaucoup et évitez les efforts intenses le reste de la journée. En cas de malaise, prévenez le personnel.",
+        "ar": "قبل التبرع: تناول طعامك المعتاد، واشرب الماء، واسترح، وأحضر بطاقة هوية. بعده: استرح قليلًا، واشرب كثيرًا، وتجنب المجهود الشديد بقية اليوم. وإذا شعرت بدوار فأبلغ الطاقم.",
+        "darija": "قبل التبرع: كُل كيما العادة، اشرب ماء، ارتاح، وجيب معاك بطاقة التعريف. بعدو: ارتاح شوية، اشرب برشا، وما تعملش مجهود كبير باقي النهار. وكان حسيت روحك دايخ قول للفريق."
+      },
+      "keywords": {
+        "fr": [
+          "avant",
+          "après",
+          "manger",
+          "repos",
+          "conseils"
+        ],
+        "ar": [
+          "قبل",
+          "بعد",
+          "نصائح",
+          "طعام"
+        ],
+        "darija": [
+          "قبل",
+          "بعد",
+          "نصايح",
+          "ناكل"
+        ]
+      }
+    },
+    {
+      "id": "securite-du-don",
+      "topic": "Le don est-il sans danger",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Le don de sang est-il sans danger ?",
+        "ar": "هل التبرع بالدم آمن؟",
+        "darija": "التبرع بالدم فيه خطر؟"
+      },
+      "answer": {
+        "fr": "Le matériel de prélèvement est stérile et à usage unique, et le personnel médical vérifie votre état avant chaque don. Il est normal de se sentir un peu fatigué ensuite. Si vous avez un doute, parlez-en au personnel présent.",
+        "ar": "أدوات سحب الدم معقمة وتُستعمل مرة واحدة فقط، ويفحص الطاقم الطبي حالتك قبل كل تبرع. من الطبيعي أن تشعر بقليل من التعب بعده. وإذا انتابك شك فتحدث إلى الطاقم الحاضر.",
+        "darija": "معدات السحب معقمة وتستعمل مرة برك، والفريق الطبي يفحص حالتك قبل كل تبرع. عادي تحس بشوية تعب بعدو. وكان عندك شك احكي مع الفريق الموجود."
+      },
+      "keywords": {
+        "fr": [
+          "danger",
+          "risque",
+          "sécurité",
+          "douleur",
+          "stérile"
+        ],
+        "ar": [
+          "خطر",
+          "آمن",
+          "ألم",
+          "معقم"
+        ],
+        "darija": [
+          "خطر",
+          "آمن",
+          "وجيعة",
+          "معقم"
+        ]
+      }
+    },
+    {
+      "id": "confidentialite",
+      "topic": "Confidentialité des réponses",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Qui voit mes réponses au formulaire ?",
+        "ar": "من يطّلع على إجاباتي في الاستمارة؟",
+        "darija": "شكون يشوف أجوبتي في الاستمارة؟"
+      },
+      "answer": {
+        "fr": "Vos réponses sont chiffrées et accessibles uniquement au personnel médical autorisé. Elles servent seulement à vérifier que le don est sans risque, et le nom d'un patient n'apparaît jamais dans les alertes.",
+        "ar": "إجاباتك مشفّرة ولا يطّلع عليها إلا الطاقم الطبي المخوَّل، ولا تُستعمل إلا للتأكد من أن التبرع آمن. ولا يظهر اسم أي مريض في التنبيهات أبدًا.",
+        "darija": "أجوبتك مشفّرة وما يشوفهاش كان الفريق الطبي المخوَّل، وتستعمل برك باش نتأكدو أن التبرع آمن. واسم المريض ما يظهرش أبدا في التنبيهات."
+      },
+      "keywords": {
+        "fr": [
+          "confidentialité",
+          "vie privée",
+          "données",
+          "réponses",
+          "qui voit"
+        ],
+        "ar": [
+          "سرية",
+          "خصوصية",
+          "بيانات",
+          "إجابات"
+        ],
+        "darija": [
+          "سرية",
+          "خصوصية",
+          "بيانات",
+          "أجوبة"
+        ]
+      }
+    },
+    {
+      "id": "alertes-urgence",
+      "topic": "Alertes d'urgence",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Pourquoi et quand vais-je recevoir des alertes ?",
+        "ar": "متى ولماذا أتلقى التنبيهات؟",
+        "darija": "وقتاش وعلاش توصلني التنبيهات؟"
+      },
+      "answer": {
+        "fr": "Vous êtes alerté uniquement si votre groupe sanguin est compatible, si vous êtes éligible, si le délai depuis votre dernier don est écoulé et si vous êtes proche de l'hôpital. Vous pouvez désactiver les alertes ou limiter le rayon dans votre profil.",
+        "ar": "تصلك التنبيهات فقط إذا كانت فصيلة دمك متوافقة وكنت مؤهلًا وانقضت المدة منذ آخر تبرع وكنت قريبًا من المستشفى. يمكنك إيقاف التنبيهات أو تقليص النطاق من ملفك.",
+        "darija": "توصلك التنبيهات برك كان فصيلة دمك متوافقة وأنت مؤهل وفاتت المدة من آخر تبرع وأنت قريب من المستشفى. تنجم توقف التنبيهات ولا تنقّص النطاق من ملفك."
+      },
+      "keywords": {
+        "fr": [
+          "alerte",
+          "notification",
+          "pourquoi",
+          "désactiver",
+          "rayon"
+        ],
+        "ar": [
+          "تنبيه",
+          "إشعار",
+          "لماذا",
+          "إيقاف",
+          "نطاق"
+        ],
+        "darija": [
+          "تنبيه",
+          "إشعار",
+          "علاش",
+          "وقتاش",
+          "نطاق"
+        ]
+      }
+    },
+    {
+      "id": "collectes-croissant-rouge",
+      "topic": "Collectes du Croissant-Rouge",
+      "needs_staff": false,
+      "validated": false,
+      "source": null,
+      "question": {
+        "fr": "Comment participer à une collecte du Croissant-Rouge ?",
+        "ar": "كيف أشارك في حملة تبرع للهلال الأحمر؟",
+        "darija": "كيفاش نشارك في حملة تبرع للهلال الأحمر؟"
+      },
+      "answer": {
+        "fr": "Les collectes du Croissant-Rouge Tunisien sont dans le calendrier de l'application. Choisissez un événement près de chez vous et réservez un créneau : l'inscription n'est acceptée que si vous serez éligible à cette date.",
+        "ar": "حملات الهلال الأحمر التونسي موجودة في روزنامة التطبيق. اختر حدثًا قريبًا منك واحجز موعدًا؛ ولا يقبل التسجيل إلا إذا كنت مؤهلًا في ذلك التاريخ.",
+        "darija": "حملات الهلال الأحمر التونسي تلقاها في روزنامة التطبيق. اختار حملة قريبة منك واحجز وقت؛ والتسجيل يتقبل برك كان تكون مؤهل في التاريخ هذاكا."
+      },
+      "keywords": {
+        "fr": [
+          "croissant-rouge",
+          "collecte",
+          "événement",
+          "calendrier",
+          "réserver"
+        ],
+        "ar": [
+          "الهلال الأحمر",
+          "حملة",
+          "حدث",
+          "روزنامة",
+          "حجز"
+        ],
+        "darija": [
+          "الهلال الأحمر",
+          "حملة",
+          "روزنامة",
+          "حجز"
+        ]
+      }
+    }
+  ]
+}
