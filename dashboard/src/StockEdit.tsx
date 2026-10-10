@@ -5,26 +5,29 @@ import { ApiError } from './api'
 import { GROUPS, show } from './requests'
 import { adjustStock, LEVELS, useStocks } from './stocks'
 
+type Msg = { tone: 'add' | 'remove' | 'error'; text: string }
+const TONE: Record<Msg['tone'], string> = { add: 'text-success', remove: 'text-primary', error: 'text-primary-dark' }
+
 export default function StockEdit() {
   const { group = '' } = useParams()
   const { list, setList, error } = useStocks()
   const [step, setStep] = useState(1)
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [msg, setMsg] = useState<Msg | null>(null)
 
   const valid = (GROUPS as readonly string[]).includes(group)
   const stock = list?.find((s) => s.group === group)
   const stepOk = Number.isInteger(step) && step >= 1 && step <= 500
 
   const apply = async (sign: 1 | -1) => {
-    if (!stepOk) { setMsg({ ok: false, text: 'Indiquez un pas entre 1 et 500.' }); return }
+    if (!stepOk) { setMsg({ tone: 'error', text: 'Indiquez un pas entre 1 et 500.' }); return }
     setBusy(true); setMsg(null)
     try {
       setList(await adjustStock(group, sign * step))
-      setMsg({ ok: true, text: `${step} poche${step > 1 ? 's' : ''} ${sign > 0 ? 'ajoutée' : 'retirée'}${step > 1 ? 's' : ''}.` })
+      setMsg({ tone: sign > 0 ? 'add' : 'remove', text: `${step} poche${step > 1 ? 's' : ''} ${sign > 0 ? 'ajoutée' : 'retirée'}${step > 1 ? 's' : ''}.` })
     } catch (err) {
       const s = err instanceof ApiError ? err.status : 0
-      setMsg({ ok: false, text: s === 403 ? "Votre établissement n'est pas autorisé à modifier ce stock."
+      setMsg({ tone: 'error', text: s === 403 ? "Votre établissement n'est pas autorisé à modifier ce stock."
         : s === 400 ? (err as ApiError).message : 'Modification impossible, réessayez.' })
     } finally { setBusy(false) }
   }
@@ -58,7 +61,7 @@ export default function StockEdit() {
             onChange={(e) => setStep(e.target.valueAsNumber)}
             className="mt-1 w-full rounded-lg border border-line bg-plasma px-3 py-2 text-center" />
         </label>
-        {msg && <p role="alert" className={`text-sm font-medium ${msg.ok ? 'text-success' : 'text-primary-dark'}`}>{msg.text}</p>}
+        {msg && <p role="alert" className={`text-sm font-semibold ${TONE[msg.tone]}`}>{msg.text}</p>}
       </section>
     </div>
   )

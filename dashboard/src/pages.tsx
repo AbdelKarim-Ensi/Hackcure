@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import CurrentRequest from './CurrentRequest'
+import StockIcon from './StockIcon'
 import { PROFILES, useProfile } from './profiles'
 import { events0, type EventItem } from './data'
 import { show } from './requests'
@@ -12,7 +13,10 @@ function StockTile({ s, editable }: { s: Stock; editable?: boolean }) {
   return (
     <article className="relative flex min-h-40 flex-col justify-between overflow-hidden rounded-2xl border border-line bg-serum p-4">
       <div className={`absolute inset-x-0 bottom-0 opacity-20 ${l.fill}`} style={{ height: `${pct}%` }} aria-hidden="true" />
-      <p className="relative font-display text-3xl font-bold leading-none">{show(s.group)}</p>
+      <div className="relative flex items-start justify-between">
+        <p className="font-display text-3xl font-bold leading-none">{show(s.group)}</p>
+        <StockIcon level={s.level} />
+      </div>
       <div className="relative space-y-2">
         <div className="text-sm leading-snug text-muted">
           <p><span className="font-semibold text-ink">{s.qty}</span> poches</p>
