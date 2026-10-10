@@ -1,5 +1,5 @@
 // T4.4 + T4.5 : service des demandes (création, lecture, réponse du donneur).
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'crypto'; // AJOUT : T5.5
 import { Repository } from 'typeorm';
@@ -8,9 +8,11 @@ import { canDonateTo } from '../common/rules/blood-compat';
 import { BloodRequest, Donor, RequestResponse } from '../database/entities';
 import { RequestWave } from '../database/entities/requests.entities'; // AJOUT : T5.5
 import { EligibilityStatus, RequestStatus, ResponseType, UserRole } from '../database/enums';
+import { AnomalyService } from '../anomaly/anomaly.service'; // AJOUT : T14
 import { InstitutionsService } from '../institutions/institutions.service';
 import { WavesService } from '../waves/waves.service';
 import { LiveEventsService } from '../live/live-events.service'; // AJOUT T5.4
+import { ReviewDecision } from './dto/requests.dto'; // AJOUT : T14
 import type { CreateRequestDto, GaugeDto, RequestDto, RespondDto, RespondResultDto } from './dto/requests.dto';
 import type { DonorEnRouteDto, LiveStateDto, WaveDto } from './dto/requests.dto'; // AJOUT : T5.5
 
@@ -32,6 +34,8 @@ export class RequestsService {
     @Optional() private readonly live?: LiveEventsService,
     // AJOUT : T5.5 : vagues pour l'état live (optionnel pour ne pas casser les specs existantes).
     @Optional() @InjectRepository(RequestWave) private readonly waveRows?: Repository<RequestWave>,
+    // AJOUT : T14 : détection d'anomalies (optionnel : sans lui, la demande reste active comme avant T14).
+    @Optional() private readonly anomaly?: AnomalyService,
   ) {}
 
   toDto(r: BloodRequest): RequestDto {
@@ -60,6 +64,17 @@ export class RequestsService {
       throw new BadRequestException("L'échéance doit être dans le futur");
     }
     const radius = dto.initialRadiusKm ?? 10;
+    // AJOUT : T14 : évaluation AVANT l'enregistrement. reject = 422, review = en_revue (aucune vague), sinon active.
+    const assessment = this.anomaly
+      ? await this.anomaly.assess({
+          institutionId: inst.id,
+          bloodGroup: dto.bloodGroup,
+          quantity: dto.quantity,
+          urgency: dto.urgency,
+          deadline,
+        }, this.now())
+      : null;
+    if (assessment?.level === 'reject') throw new UnprocessableEntityException(assessment.flags);
     const saved = await this.requests.save(
       this.requests.create({
         institutionId: inst.id,
@@ -70,10 +85,16 @@ export class RequestsService {
         deadline,
         initialRadiusKm: radius,
         currentRadiusKm: radius,
-        // Le score d'anomalie (M2, T14) pourra passer la demande en en_revue ; sans score, elle est active.
-        status: RequestStatus.Active,
+        // T14 : un score élevé retient la demande en en_revue ; sans évaluation, elle est active.
+        status: assessment?.level === 'review' ? RequestStatus.EnRevue : RequestStatus.Active,
+        ...(assessment ? { anomalyScore: assessment.scoreForDb } : {}),
       }),
     );
+    if (assessment && assessment.level !== 'ok') {
+      this.logger.warn(
+        `Anomalie ${assessment.level} (score ${assessment.scoreForDb}) sur la demande ${saved.id} : ${assessment.flags.map((f) => f.code).join(', ')}`,
+      );
+    }
     // T5.1 : vague 1 en arrière-plan, la réponse à l'hôpital n'attend pas les envois.
     if (saved.status === RequestStatus.Active && this.waves) {
       void this.waves
@@ -82,6 +103,46 @@ export class RequestsService {
     }
     saved.institution = inst;
     return this.toDto(saved);
+  }
+
+  /** AJOUT : T14 : demandes retenues en en_revue, les plus suspectes d'abord (admin). */
+  async listForReview(): Promise<RequestDto[]> {
+    const rows = await this.requests.find({
+      where: { status: RequestStatus.EnRevue },
+      relations: ['institution'],
+      order: { anomalyScore: 'DESC', createdAt: 'ASC' },
+    });
+    return rows.map((r) => this.toDto(r));
+  }
+
+  /**
+   * AJOUT : T14 : décision de l'admin sur une demande en_revue.
+   * approve -> active + vague 1 ; reject -> cloturee, aucune alerte.
+   * Le UPDATE est conditionné au statut : deux admins ne peuvent pas décider la même demande.
+   */
+  async review(id: string, decision: ReviewDecision): Promise<RequestDto> {
+    const req = await this.requests.findOne({ where: { id }, relations: ['institution'] });
+    if (!req) throw new NotFoundException('Demande introuvable');
+    if (req.status !== RequestStatus.EnRevue) throw new ConflictException("Cette demande n'est pas en revue");
+
+    const approve = decision === ReviewDecision.APPROVE;
+    if (approve && new Date(req.deadline).getTime() <= this.now().getTime()) {
+      throw new ConflictException("L'échéance est dépassée : la demande ne peut plus être approuvée");
+    }
+    const result = await this.requests.update(
+      { id, status: RequestStatus.EnRevue },
+      approve ? { status: RequestStatus.Active } : { status: RequestStatus.Cloturee, closedAt: this.now() },
+    );
+    if (!result.affected) throw new ConflictException("Cette demande n'est pas en revue");
+
+    req.status = approve ? RequestStatus.Active : RequestStatus.Cloturee;
+    if (!approve) req.closedAt = this.now();
+    if (approve && this.waves) {
+      void this.waves
+        .runWave(id)
+        .catch((e: Error) => this.logger.error(`Vague 1 échouée pour ${id} : ${e.message}`));
+    }
+    return this.toDto(req);
   }
 
   /** Hôpital : ses demandes. Direction et admin : toutes. */

@@ -1,4 +1,5 @@
 import { WavesModule } from '../waves/waves.module';
+import { AnomalyModule } from '../anomaly/anomaly.module'; // AJOUT : T14
 import { LiveModule } from '../live/live.module'; // AJOUT T5.4
 // AJOUT : T4.4 / T4.5 - entités et RequestsService
 import { Module } from '@nestjs/common';
@@ -11,7 +12,7 @@ import { RequestsService } from './requests.service';
 
 @Module({
   // AJOUT : T5.5 - RequestWave pour l'état live
-  imports: [WavesModule, LiveModule, InstitutionsModule, TypeOrmModule.forFeature([BloodRequest, RequestResponse, Donor, RequestWave])],
+  imports: [WavesModule, LiveModule, AnomalyModule, InstitutionsModule, TypeOrmModule.forFeature([BloodRequest, RequestResponse, Donor, RequestWave])],
   controllers: [RequestsController],
   providers: [RequestsService],
   exports: [RequestsService],

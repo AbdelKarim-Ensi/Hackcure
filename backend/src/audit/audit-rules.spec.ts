@@ -8,6 +8,9 @@ describe('audit rules', () => {
   it("audite la validation d'établissement", () => {
     expect(findAuditRule('patch', '/institutions/:id/validate')?.entity).toBe('institution');
   });
+  it('audite la décision admin sur une demande en revue (T14)', () => {
+    expect(findAuditRule('PATCH', '/requests/:id/review')).toMatchObject({ action: 'review', entity: 'blood_request' });
+  });
   it('ignore les routes non sensibles', () => {
     expect(findAuditRule('GET', '/requests/:id')).toBeUndefined();
   });
