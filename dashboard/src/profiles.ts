@@ -7,12 +7,13 @@ const ACCUEIL = { to: '/', label: 'Accueil' }
 const DEMANDES = { to: '/demandes', label: 'Demandes de sang' }
 const STOCKS = { to: '/stocks', label: 'Stocks' }
 const COLLECTES = { to: '/collectes', label: 'Collectes' }
+const PROFIL = { to: '/profil', label: 'Profil' }
 
 export const PROFILES: Record<ProfileKey, { label: string; org: string; tagline: string; nav: NavItem[] }> = {
   hopital: {
     label: 'Hôpital', org: 'CHU Charles Nicolle',
     tagline: 'Demandez du sang et suivez les donneurs en route.',
-    nav: [ACCUEIL, DEMANDES, STOCKS],
+    nav: [ACCUEIL, DEMANDES, STOCKS, PROFIL],
   },
   banque_sang: {
     label: 'Banque de sang', org: 'Banque de sang de La Rabta',
