@@ -129,6 +129,22 @@ export class RequestsController {
     return this.requests.review(id, dto.decision);
   }
 
+  // AJOUT : T8 : lancement manuel de la vague suivante (urgence critique uniquement).
+  @Post(':id/waves/launch')
+  @HttpCode(200)
+  @ApiRoles(UserRole.HOPITAL)
+  @ApiOperation({
+    summary: 'Lancer manuellement la vague suivante',
+    description:
+      "Réservé à l'hôpital propriétaire d'une demande active d'urgence critique. Sinon les vagues partent automatiquement à l'échéance du délai.",
+  })
+  @ApiParam({ name: 'id', example: MOCK_IDS.request })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Demande inactive, urgence insuffisante ou aucune vague possible' })
+  launchWave(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.requests.launchWave(id, user);
+  }
+
   @Post(':id/respond')
   @HttpCode(200)
   @ApiRoles(UserRole.DONNEUR)

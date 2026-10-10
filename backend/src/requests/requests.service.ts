@@ -183,6 +183,29 @@ export class RequestsService {
     return this.toDto(r);
   }
 
+  /**
+   * AJOUT : T8 : lancement manuel de la vague suivante (hôpital propriétaire, demande active, urgence critique).
+   * Le délai de la vague courante est considéré comme écoulé ; le planificateur décide du rayon.
+   */
+  async launchWave(
+    id: string,
+    user: AuthenticatedUser,
+  ): Promise<{ launched: true; waveNumber: number; radiusKm: number; sent: number }> {
+    const MANUAL_WAVE_URGENCY = 'critique';
+    const r = await this.getOne(id, user); // 404 / 403
+    if (String(r.status) !== 'active') throw new ConflictException("La demande n'est plus active");
+    if (String(r.urgency) !== MANUAL_WAVE_URGENCY) {
+      throw new ConflictException('Lancement manuel réservé aux demandes très urgentes (critique)');
+    }
+    if (!this.waves) throw new ConflictException('Service de vagues indisponible');
+    const res = await this.waves.runWave(id, new Date(), true);
+    if (res.action === 'skipped') throw new ConflictException('Une vague est déjà en cours de lancement');
+    if (res.action !== 'launch') {
+      throw new ConflictException(`Aucune vague possible pour le moment (${res.action})`);
+    }
+    return { launched: true, waveNumber: res.waveNumber ?? 0, radiusKm: res.radiusKm ?? 0, sent: res.sent };
+  }
+
   async gauge(requestId: string, needed: number): Promise<GaugeDto> {
     const accepted = await this.responses.count({ where: { requestId, response: ResponseType.JeViens } });
     return { accepted, needed, percent: needed > 0 ? Math.min(100, Math.round((accepted / needed) * 100)) : 0 };
