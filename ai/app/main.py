@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 
 from . import __version__
+from .guardrails import check_emergency, check_medical_advice
 from .kb import load_kb
 from .language import resolve_language
 from .schemas import ChatRequest, ChatResponse, HealthResponse, Source
@@ -25,10 +26,23 @@ def health() -> HealthResponse:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    """Cherche la question dans la base de connaissances. Si rien ne correspond assez, il le dit."""
+    """Urgence d'abord, puis base de connaissances, puis refus des conseils médicaux personnels."""
     language = resolve_language(req.language, req.message)
-    matches = _search.search(req.message)
 
+    # 1. Urgence : toujours en premier, avant toute recherche
+    emergency = check_emergency(req.message)
+    if emergency.triggered:
+        return ChatResponse(
+            answer=emergency.answer,
+            language=language,
+            intent="emergency",
+            sources=[],
+            needs_staff=True,
+            disclaimer=DISCLAIMERS[language],
+        )
+
+    # 2. Base de connaissances
+    matches = _search.search(req.message)
     if is_confident(matches):
         entry = matches[0].entry
         return ChatResponse(
@@ -40,6 +54,19 @@ def chat(req: ChatRequest) -> ChatResponse:
             disclaimer=DISCLAIMERS[language],
         )
 
+    # 3. Pas de réponse validée : on refuse le conseil médical personnel
+    advice = check_medical_advice(req.message)
+    if advice.triggered:
+        return ChatResponse(
+            answer=advice.answer,
+            language=language,
+            intent="escalate",
+            sources=[],
+            needs_staff=True,
+            disclaimer=DISCLAIMERS[language],
+        )
+
+    # 4. Hors sujet
     return ChatResponse(
         answer=FALLBACK_ANSWERS[language],
         language=language,
