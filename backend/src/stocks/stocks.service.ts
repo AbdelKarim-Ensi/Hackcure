@@ -1,4 +1,5 @@
 // AJOUT : T6.6 - stocks réels par établissement et par groupe sanguin, niveaux rouge/orange/vert.
+// AJOUT : T8 - add() : ajout de poches pour l'établissement du compte connecté.
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -6,7 +7,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 import { BloodGroup, StockLevel, UserRole } from '../common/enums';
 import { Institution } from '../database/entities/identity.entities';
 import { Stock } from '../database/entities/ops.entities';
-import type { InstitutionStockDto, StockLineDto } from './stocks.controller';
+import type { AddStockDto, InstitutionStockDto, StockLineDto } from './stocks.controller';
 
 const DEFAULT_THRESHOLD = 10;
 
@@ -77,5 +78,29 @@ export class StocksService {
         return { bloodGroup, quantity, alertThreshold, level: levelOf(quantity, alertThreshold) };
       }),
     }));
+  }
+
+  /** Ajoute des poches au stock de l'établissement du compte (crée la ligne si besoin). */
+  async add(actor: AuthenticatedUser, dto: AddStockDto): Promise<InstitutionStockDto> {
+    const institutionId = actor.institutionId;
+    if (!institutionId) throw new ForbiddenException('Aucun établissement rattaché à ce compte');
+
+    const existing = await this.stocks.findOne({ where: { institutionId, bloodGroup: dto.bloodGroup as unknown as Stock["bloodGroup"] } });
+    if (existing) {
+      existing.quantity = Number(existing.quantity) + dto.quantity;
+      if (dto.alertThreshold !== undefined) existing.alertThreshold = dto.alertThreshold;
+      await this.stocks.save(existing);
+    } else {
+      await this.stocks.save(
+        this.stocks.create({
+          institutionId,
+          bloodGroup: dto.bloodGroup as unknown as Stock["bloodGroup"],
+          quantity: dto.quantity,
+          alertThreshold: dto.alertThreshold ?? DEFAULT_THRESHOLD,
+        }),
+      );
+    }
+    const [result] = await this.list(actor, institutionId);
+    return result;
   }
 }

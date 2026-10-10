@@ -1,7 +1,9 @@
 // AJOUT : T3 - squelette du contrôleur stocks (DTO inclus, service réel en T6.6)
 // AJOUT : T6.6 - list branché sur StocksService (plus de mock, contrat inchangé).
-import { Controller, Get, ParseUUIDPipe, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
+// AJOUT : T8 - POST /stocks : ajout de poches par l'établissement connecté.
+import { Body, Controller, Get, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiPropertyOptional, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -42,6 +44,25 @@ export class InstitutionStockDto {
   stocks!: StockLineDto[];
 }
 
+export class AddStockDto {
+  @ApiProperty({ enum: BloodGroup, enumName: 'BloodGroup' })
+  @IsEnum(BloodGroup)
+  bloodGroup!: BloodGroup;
+
+  @ApiProperty({ example: 12, description: 'Poches à ajouter au stock actuel (1 à 500)' })
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  quantity!: number;
+
+  @ApiPropertyOptional({ example: 15, description: "Nouveau seuil d'alerte (facultatif)" })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  alertThreshold?: number;
+}
+
 @ApiTags('stocks')
 @Controller('stocks')
 export class StocksController {
@@ -60,5 +81,16 @@ export class StocksController {
     @Query('institutionId', new ParseUUIDPipe({ optional: true })) institutionId?: string,
   ): Promise<InstitutionStockDto[]> {
     return this.service.list(user, institutionId);
+  }
+
+  @Post()
+  @ApiRoles(UserRole.HOPITAL)
+  @ApiOperation({
+    summary: 'Ajouter des poches au stock de son établissement',
+    description: 'Ajoute la quantité au stock actuel du groupe (la ligne est créée si absente). Le seuil est mis à jour si fourni.',
+  })
+  @ApiCreatedResponse({ type: InstitutionStockDto })
+  add(@CurrentUser() user: AuthenticatedUser, @Body() dto: AddStockDto): Promise<InstitutionStockDto> {
+    return this.service.add(user, dto);
   }
 }
