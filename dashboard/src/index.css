@@ -23,6 +23,24 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Tailwind v4 remet cursor: default sur les boutons : on rétablit le pointeur */
+@layer base {
+  button,
+  [role="button"],
+  a[href],
+  select,
+  summary,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 /* Électrocardiogramme : un segment lumineux parcourt la ligne */
 @keyframes trace { from { stroke-dashoffset: 0.16; } to { stroke-dashoffset: -1; } }
 @keyframes beat { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.18); } 24% { transform: scale(1); } 36% { transform: scale(1.1); } }
