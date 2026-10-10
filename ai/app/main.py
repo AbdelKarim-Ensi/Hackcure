@@ -5,6 +5,7 @@ from . import __version__
 from .guardrails import check_emergency, check_medical_advice
 from .kb import load_kb
 from .language import resolve_language
+from .llm import reword
 from .schemas import ChatRequest, ChatResponse, HealthResponse, Source
 from .search import KbSearch, is_confident
 from .texts import DISCLAIMERS, FALLBACK_ANSWERS
@@ -45,8 +46,13 @@ def chat(req: ChatRequest) -> ChatResponse:
     matches = _search.search(req.message)
     if is_confident(matches):
         entry = matches[0].entry
+        answer = getattr(entry.answer, language)
+        # Étape 5 (optionnelle) : on reformule UNIQUEMENT une réponse validée qui n'est pas
+        # une escalade. Si le LLM est désactivé, en erreur ou rejeté, on garde le texte validé.
+        if not entry.needs_staff and getattr(entry, "validated", False):
+            answer = reword(req.message, answer, language) or answer
         return ChatResponse(
-            answer=getattr(entry.answer, language),
+            answer=answer,
             language=language,
             intent="escalate" if entry.needs_staff else "faq",
             sources=[Source(id=entry.id, title=entry.topic)],
