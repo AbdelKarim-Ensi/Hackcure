@@ -191,11 +191,11 @@ export class RequestsService {
     id: string,
     user: AuthenticatedUser,
   ): Promise<{ launched: true; waveNumber: number; radiusKm: number; sent: number }> {
-    const MANUAL_WAVE_URGENCY = 'critique';
+    const MANUAL_WAVE_URGENCIES = ['urgente', 'critique'];
     const r = await this.getOne(id, user); // 404 / 403
     if (String(r.status) !== 'active') throw new ConflictException("La demande n'est plus active");
-    if (String(r.urgency) !== MANUAL_WAVE_URGENCY) {
-      throw new ConflictException('Lancement manuel réservé aux demandes très urgentes (critique)');
+    if (!MANUAL_WAVE_URGENCIES.includes(String(r.urgency))) {
+      throw new ConflictException('Lancement manuel réservé aux demandes urgentes ou critiques');
     }
     if (!this.waves) throw new ConflictException('Service de vagues indisponible');
     const res = await this.waves.runWave(id, new Date(), true);

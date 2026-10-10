@@ -18,7 +18,7 @@ export default function LaunchWaveButton({ variant }: { variant: 'card' | 'sideb
 
   if (!req) return null
   const id = req.id
-  const allowed = req.urgency === 'critique'
+  const allowed = req.urgency === 'urgente' || req.urgency === 'critique'
 
   async function onClick() {
     setBusy(true)
@@ -45,12 +45,11 @@ export default function LaunchWaveButton({ variant }: { variant: 'card' | 'sideb
         type="button"
         onClick={onClick}
         disabled={!allowed || busy}
-        title={allowed ? undefined : 'Réservé aux demandes critiques'}
         className={style}
       >
         {busy ? 'Lancement…' : 'Lancer la vague suivante'}
       </button>
-      {!allowed && <p className="mt-1 text-xs text-muted">Réservé aux demandes critiques.</p>}
+      {!allowed && <p className="mt-1 text-xs text-muted">Réservé aux demandes urgentes ou critiques.</p>}
       {msg && <p className={`mt-1 text-xs ${msg.ok ? 'text-success' : 'text-warning'}`}>{msg.text}</p>}
     </div>
   )
