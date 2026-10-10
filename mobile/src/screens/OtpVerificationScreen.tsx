@@ -332,7 +332,7 @@ export const OtpVerificationScreen: React.FC<Props> = ({ navigation, route }) =>
                                         <Text style={styles.brandTitle}>Damm</Text>
                                         <Text style={styles.brandArabic}>دم</Text>
                                     </View>
-                                    <Text style={styles.brandSubtitle}>Donnez votre sang, sauvez des vies</Text>
+                                    <Text style={styles.brandSubtitle}>Chaque goutte compte</Text>
                                 </View>
                             </View>
 
