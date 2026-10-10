@@ -306,7 +306,7 @@ export const ProfileScreen = ({ navigation }: Props) => {
                     </View>
 
                     <Text style={headerStyles.brandSubtitle}>
-                        Banque de sang de Charles Nicolle • Profil Donneur
+                        Chque goutte compte.
                     </Text>
 
                     <View style={headerStyles.profileHeroCard}>

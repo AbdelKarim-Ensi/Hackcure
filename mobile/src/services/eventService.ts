@@ -51,6 +51,9 @@ export const getDonorProfile = async (token: string): Promise<DonorProfile> => {
 export const updateDonorProfile = async (
     token: string,
     payload: {
+        fullName?: string;
+        sex?: string;
+        bloodGroup?: string;
         zone?: string;
         position?: { latitude: number; longitude: number };
         available?: boolean;
@@ -204,7 +207,7 @@ export const registerToEvent = async (
 /**
  * 🎯 Récupère l'historique propre à l'utilisateur actuellement connecté
  */
-export const getUserRegistrations = async (): Promise<RegistrationHistoryItem[]> => {
+export const getUserRegistrations = async (_token?: string): Promise<RegistrationHistoryItem[]> => {
     try {
         const profileStr = await AsyncStorage.getItem('user_profile');
         const profile = profileStr ? JSON.parse(profileStr) : null;
@@ -224,8 +227,6 @@ export const getUserRegistrations = async (): Promise<RegistrationHistoryItem[]>
     }
     return [];
 };
-
-
 
 export interface ApiNotification {
     id: string;
