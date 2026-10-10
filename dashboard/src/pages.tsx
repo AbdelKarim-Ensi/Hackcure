@@ -33,9 +33,22 @@ function StockTile({ s, editable }: { s: Stock; editable?: boolean }) {
     </article>
   )
 }
-const StockGrid = ({ list, editable }: { list: Stock[]; editable?: boolean }) => (
-  <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4">
-    {list.map((s) => <StockTile key={s.group} s={s} editable={editable} />)}
+// Disposition par famille (desktop) : une colonne par type, négatifs en haut, positifs en dessous.
+const FAMILY_POS: Record<string, string> = {
+  'O-': 'lg:col-start-1 lg:row-start-1', 'O+': 'lg:col-start-1 lg:row-start-2',
+  'A-': 'lg:col-start-2 lg:row-start-1', 'A+': 'lg:col-start-2 lg:row-start-2',
+  'B-': 'lg:col-start-3 lg:row-start-1', 'B+': 'lg:col-start-3 lg:row-start-2',
+  'AB-': 'lg:col-start-4 lg:row-start-1', 'AB+': 'lg:col-start-4 lg:row-start-2',
+}
+const StockGrid = ({ list, editable, byFamily }: { list: Stock[]; editable?: boolean; byFamily?: boolean }) => (
+  <div className={byFamily
+    ? 'grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-4'
+    : 'grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-4'}>
+    {list.map((s) => (
+      <div key={s.group} className={byFamily ? FAMILY_POS[s.group] : undefined}>
+        <StockTile s={s} editable={editable} />
+      </div>
+    ))}
   </div>
 )
 
@@ -124,7 +137,7 @@ export function Stocks() {
       <h1 className="mb-4 font-display text-2xl font-bold">Stocks par groupe</h1>
       {list === null && <p className="text-muted">Chargement…</p>}
       {error && <p role="alert" className="text-primary-dark">Impossible de charger les stocks.</p>}
-      {list && list.length > 0 && <StockGrid list={list} editable={canEdit} />}
+      {list && list.length > 0 && <StockGrid list={list} editable={canEdit} byFamily />}
     </section>
   )
 }
