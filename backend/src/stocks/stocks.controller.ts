@@ -1,8 +1,9 @@
 // AJOUT : T3 - squelette du contrôleur stocks (DTO inclus, service réel en T6.6)
 // AJOUT : T6.6 - list branché sur StocksService (plus de mock, contrat inchangé).
 // AJOUT : T8 - POST /stocks : ajout de poches par l'établissement connecté.
-import { Body, Controller, Get, ParseUUIDPipe, Post, Query } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiProperty, ApiPropertyOptional, ApiQuery, ApiTags } from '@nestjs/swagger';
+// AJOUT : T8 - PATCH /stocks/:bloodGroup : ajustement +/- du stock (delta).
+import { Body, Controller, Get, Param, ParseEnumPipe, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiProperty, ApiPropertyOptional, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
@@ -63,6 +64,14 @@ export class AddStockDto {
   alertThreshold?: number;
 }
 
+export class AdjustStockDto {
+  @ApiProperty({ example: -3, description: 'Variation du stock : positive pour ajouter, négative pour retirer (-500 à 500, hors 0)' })
+  @IsInt()
+  @Min(-500)
+  @Max(500)
+  delta!: number;
+}
+
 @ApiTags('stocks')
 @Controller('stocks')
 export class StocksController {
@@ -92,5 +101,21 @@ export class StocksController {
   @ApiCreatedResponse({ type: InstitutionStockDto })
   add(@CurrentUser() user: AuthenticatedUser, @Body() dto: AddStockDto): Promise<InstitutionStockDto> {
     return this.service.add(user, dto);
+  }
+
+  @Patch(':bloodGroup')
+  @ApiRoles(UserRole.HOPITAL)
+  @ApiOperation({
+    summary: 'Ajuster le stock d\'un groupe (+ ou -)',
+    description: 'Applique delta au stock actuel du groupe. 400 si delta vaut 0 ou si le stock final serait négatif.',
+  })
+  @ApiParam({ name: 'bloodGroup', enum: BloodGroup, enumName: 'BloodGroup' })
+  @ApiOkResponse({ type: InstitutionStockDto })
+  adjust(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('bloodGroup', new ParseEnumPipe(BloodGroup)) bloodGroup: BloodGroup,
+    @Body() dto: AdjustStockDto,
+  ): Promise<InstitutionStockDto> {
+    return this.service.adjust(user, bloodGroup, dto.delta);
   }
 }
