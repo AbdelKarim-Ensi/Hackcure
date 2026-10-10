@@ -49,6 +49,10 @@ for p in $(echo "$W1" | head -n 2); do respond "$ID" "$p"; done
 live "$ID"
 
 echo "== 3. Attente de la vague 2 (max ${TIMEOUT}s)"
+if [ "${MANUAL:-0}" = "1" ]; then
+  echo "   lancement manuel de la vague 2 (POST /waves/launch)"
+  curl -s -X POST "$API/requests/$ID/waves/launch" -H "Authorization: Bearer $HT"; echo
+fi
 START=$SECONDS
 until [ "$(nwaves "$ID")" -ge 2 ]; do
   [ $((SECONDS-START)) -lt "$TIMEOUT" ] || { echo "Vague 2 non déclenchée après ${TIMEOUT}s : voir /tmp/api.log"; exit 1; }
