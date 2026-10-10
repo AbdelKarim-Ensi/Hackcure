@@ -130,7 +130,7 @@ export const HistoryScreen = ({ navigation }: Props) => {
             }
 
             // Transmission obligatoire du token à la requête
-            const historyData = await getUserRegistrations(storedToken as any);
+            const historyData = await getUserRegistrations();
 
             // Garantir que c'est un tableau valide (évite les données parasites)
             if (Array.isArray(historyData)) {
