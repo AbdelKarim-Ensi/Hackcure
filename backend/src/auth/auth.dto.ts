@@ -1,13 +1,27 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
 import { UserRole } from '../database/enums';
 
 // AJOUT : PHONE_RE accepte déjà les fixes tunisiens (+21671xxxxxx ou 71xxxxxx), pas seulement les mobiles.
 const PHONE_RE = /^\+?[0-9]{8,15}$/;
 
+// AJOUT : fix login - une seule forme canonique (+216XXXXXXXX) pour register / otp / login.
+// Avant : "71000401", "+216 71 000 401" et "+21671000401" étaient 3 comptes différents -> login 401 "Identifiants invalides".
+const normalizePhone = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  const s = value.replace(/[\s.\-()]/g, '');
+  // AJOUT : 8 chiffres testés AVANT le préfixe 00 (sinon "00010001" devenait "+010001" -> 400). Ordre d'origine : 00 puis 8 chiffres.
+  if (/^[0-9]{8}$/.test(s)) return `+216${s}`;
+  if (/^00/.test(s)) return `+${s.slice(2)}`;
+  if (/^216[0-9]{8}$/.test(s)) return `+${s}`;
+  return s;
+};
+
 export class RegisterDto {
   // AJOUT : description mise à jour (fixe accepté pour hopital/crt)
   @ApiProperty({ example: '+21612345678', description: 'Numéro de téléphone (identifiant de connexion). Fixe tunisien accepté, ex. +21671123456 (comptes hopital et crt).' })
+  @Transform(({ value }) => normalizePhone(value)) // AJOUT : fix login
   @IsString() @Matches(PHONE_RE, { message: 'phone must be a valid phone number' })
   phone!: string;
 
@@ -38,6 +52,7 @@ export class RegisterResponseDto {
 
 export class OtpSendDto {
   @ApiProperty({ example: '+21612345678' })
+  @Transform(({ value }) => normalizePhone(value)) // AJOUT : fix login
   @IsString() @Matches(PHONE_RE) phone!: string;
 }
 
@@ -49,13 +64,14 @@ export class OtpSendResponseDto {
 
 export class OtpVerifyDto {
   @ApiProperty({ example: '+21612345678' })
+  @Transform(({ value }) => normalizePhone(value)) // AJOUT : fix login
   @IsString() @Matches(PHONE_RE) phone!: string;
   @ApiProperty({ example: '123456', description: 'Code à 6 chiffres' })
   @IsString() @Length(6, 6) code!: string;
 }
 
 export class LoginDto {
-  @ApiProperty({ example: '+21612345678' }) @IsString() @Matches(PHONE_RE) phone!: string;
+  @ApiProperty({ example: '+21612345678' }) @Transform(({ value }) => normalizePhone(value)) /* AJOUT : fix login */ @IsString() @Matches(PHONE_RE) phone!: string;
   @ApiProperty({ example: 'MotDePasse#2026' }) @IsString() @MinLength(1) password!: string;
 }
 

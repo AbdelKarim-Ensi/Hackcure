@@ -67,7 +67,10 @@ export async function login(phone: string, password: string): Promise<Me | null>
   const tokens = readTokens(body)
   if (!tokens.access) throw new ApiError(500, 'Réponse /auth/login inattendue (jeton introuvable) : ' + JSON.stringify(body))
   setTokens(tokens)
-  if (body.user) { saveUser(body.user); return toMe(body.user) }
+  // AJOUT : fix login - /auth/login ne renvoie que institutionId et GET /institutions/:id n'existe pas (404) :
+  // toMe() donnait institution=null -> écran "Déclarer un établissement" pour un hôpital déjà rattaché. On laisse fetchMe() (GET /users/me) charger l'établissement.
+  // Ligne d'origine : if (body.user) { saveUser(body.user); return toMe(body.user) }
+  if (body.user) { saveUser(body.user); return null }
   return null
 }
 

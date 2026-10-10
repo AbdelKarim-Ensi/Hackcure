@@ -17,7 +17,12 @@ export default function Login() {
     e.preventDefault(); setError(''); setBusy(true)
     try { await signIn(phone.replace(/\s/g, ''), password) }
     catch (err) {
-      setError(err instanceof ApiError && err.status === 401 ? 'Téléphone ou mot de passe incorrect.' : 'Connexion impossible, réessayez.')
+      // AJOUT : fix login - on distingue identifiants faux / compte bloqué / trop d'essais (avant : tout 401 = "mot de passe incorrect")
+      setError(
+        err instanceof ApiError && err.status === 429 ? 'Trop de tentatives, réessayez dans une minute.'
+        : err instanceof ApiError && err.status === 401 && /suspendu|vérifié/i.test(err.message) ? err.message
+        : err instanceof ApiError && err.status === 401 ? 'Téléphone ou mot de passe incorrect.'
+        : 'Connexion impossible, réessayez.')
     } finally { setBusy(false) }
   }
   const input = 'mt-1 w-full rounded-lg border border-line bg-plasma px-3 py-2'
