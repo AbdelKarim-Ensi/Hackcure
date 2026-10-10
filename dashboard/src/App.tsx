@@ -8,7 +8,9 @@ import Login from './Login'
 import { ProfileCtx, profileFor, type ProfileKey } from './profiles'
 import Shell from './Shell'
 import NewRequest from './NewRequest'
-import { Events, Home, Stocks } from './pages'
+import StockEdit from './StockEdit'
+import { Home, Stocks } from './pages'
+import { Events } from './EventsPage'
 import { Requests } from './RequestsPage'
 
 // Filet de sécurité : affiche l'erreur à l'écran au lieu d'une page blanche.
@@ -40,6 +42,7 @@ function Dashboard({ first, orgName }: { first: ProfileKey; orgName: string }) {
             <Route path="demandes" element={<Requests />} />
             <Route path="demandes/nouvelle" element={<NewRequest />} />
             <Route path="stocks" element={<Stocks />} />
+            <Route path="stocks/:group" element={<StockEdit />} />
             <Route path="collectes" element={<Events />} />
           </Route>
         </Routes>
