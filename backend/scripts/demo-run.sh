@@ -6,20 +6,28 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 API="${API:-http://localhost:3000}"
 PASS="${SEED_PASSWORD:-Damm2026!}"
+SEED_PREFIX="${SEED_PREFIX:-+2160000}"      # comptes donneurs du seed : les autres ont un autre mot de passe
 TIMEOUT="${WAVE_TIMEOUT:-45}"           # attente max de la vague 2 (WAVE_DELAY_SECONDS + marge)
 HOSP="+21600010001"                     # Hôpital Charles Nicolle (seed)
 
 json() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let o=JSON.parse(s);for(const k of process.argv[1].split("."))o=o?.[k];console.log(o??"")})' "$1"; }
 token() {
   local r v
-  r=$(curl -s -X POST "$API/auth/login" -H 'Content-Type: application/json' -d "{\"phone\":\"$1\",\"password\":\"$PASS\"}")
+  for _try in 1 2 3 4 5 6 7 8; do
+    r=$(curl -s -X POST "$API/auth/login" -H 'Content-Type: application/json' -d "{\"phone\":\"$1\",\"password\":\"$PASS\"}")
+    case "$r" in
+      *Throttler*|*"Too Many"*) echo "   (limite de débit sur le login, attente 10 s)" >&2; sleep 10 ;;
+      *) break ;;
+    esac
+  done
   for k in accessToken access_token token; do v=$(echo "$r" | json "$k" 2>/dev/null || true); [ -n "$v" ] && { echo "$v"; return; }; done
   echo "Login échoué pour $1 : $r" >&2; exit 1
 }
 sql() { (cd .. && docker compose exec -T db sh -c 'psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postgres}" -At -c "$0"' "$1"); }
 alerted() { # id : téléphones des donneurs alertés, dans l'ordre d'alerte
   sql "SELECT u.phone FROM notifications n JOIN users u ON u.id=n.user_id
-       WHERE n.request_id='$1' AND n.type='urgence' ORDER BY n.created_at, u.phone"
+       WHERE n.request_id='$1' AND n.type='urgence' AND u.phone LIKE '${SEED_PREFIX}%'
+       ORDER BY n.created_at, u.phone"
 }
 respond() { # id téléphone
   local t code; t=$(token "$2")
@@ -39,6 +47,12 @@ REQ=$(curl -s -X POST "$API/requests" -H "Authorization: Bearer $HT" -H 'Content
   -d "{\"bloodGroup\":\"O+\",\"quantity\":4,\"urgency\":\"urgente\",\"deadline\":\"$DEADLINE\",\"initialRadiusKm\":5}")
 ID=$(echo "$REQ" | json id); [ -n "$ID" ] || { echo "Création échouée : $REQ"; exit 1; }
 echo "   id=$ID statut=$(echo "$REQ" | json status)"
+if [ "$(echo "$REQ" | json status)" = "en_revue" ]; then
+  echo "   retenue par la détection d'anomalies : validation par l'admin"
+  AT=$(token "+21600010100")
+  curl -s -o /dev/null -w '   review approve (%{http_code})\n' -X PATCH "$API/requests/$ID/review" \
+    -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"decision":"approve"}'
+fi
 
 for i in $(seq 1 10); do W1=$(alerted "$ID"); [ -n "$W1" ] && break; sleep 1; done
 [ -n "${W1:-}" ] || { echo "Aucun donneur alerté pour la vague 1 : voir /tmp/api.log"; exit 1; }
@@ -49,6 +63,10 @@ for p in $(echo "$W1" | head -n 2); do respond "$ID" "$p"; done
 live "$ID"
 
 echo "== 3. Attente de la vague 2 (max ${TIMEOUT}s)"
+if [ "${MANUAL:-0}" = "1" ]; then
+  echo "   lancement manuel de la vague 2 (POST /waves/launch)"
+  curl -s -X POST "$API/requests/$ID/waves/launch" -H "Authorization: Bearer $HT"; echo
+fi
 START=$SECONDS
 until [ "$(nwaves "$ID")" -ge 2 ]; do
   [ $((SECONDS-START)) -lt "$TIMEOUT" ] || { echo "Vague 2 non déclenchée après ${TIMEOUT}s : voir /tmp/api.log"; exit 1; }

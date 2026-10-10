@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLive } from './live'
+import LaunchWaveButton from './LaunchWaveButton'
 import { listRequests, show, URGENCIES, type RequestRow } from './requests'
 
 const R = 44
@@ -70,6 +71,11 @@ export default function CurrentRequest() {
             </ul>
           </div>
           {error && <p className="text-sm text-warning">Suivi en direct indisponible : {error}</p>}
+        </div>
+      )}
+      {req && (
+        <div className="mt-5">
+          <LaunchWaveButton variant="card" />
         </div>
       )}
       <Link to="/demandes/nouvelle" className="mt-5 block rounded-xl bg-primary px-4 py-3 text-center font-semibold text-white hover:bg-primary-dark">

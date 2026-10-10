@@ -69,23 +69,24 @@ export class WavesService {
    *  - expired   : demande clôturée « expiree »
    *  - exhausted : rayon max atteint, contrôle à l'échéance pour clôturer en « expiree »
    */
-  async runWave(requestId: string, now: Date = new Date()): Promise<WaveRunResult> {
+  async runWave(requestId: string, now: Date = new Date(), force = false): Promise<WaveRunResult> {
     const token = await this.acquireLock(requestId);
     if (!token) {
       return { requestId, action: 'skipped', sent: 0, failed: 0, skipped: 0 };
     }
     try {
-      return await this.step(requestId, now);
+      return await this.step(requestId, now, force);
     } finally {
       await this.releaseLock(requestId, token);
     }
   }
 
-  private async step(requestId: string, now: Date): Promise<WaveRunResult> {
+  private async step(requestId: string, now: Date, force = false): Promise<WaveRunResult> {
     const request = await this.requests.findOne({ where: { id: requestId }, relations: ['institution'] });
     if (!request) return { requestId, action: 'inactive', sent: 0, failed: 0, skipped: 0 };
 
-    const planNow = this.planningNow(request, now);
+    // AJOUT T8 : lancement manuel = délai de la vague courante considéré comme écoulé.
+    const planNow = force ? this.forcedNow(request, now) : this.planningNow(request, now);
     const plan = await this.matching.planWave(requestId, planNow);
     const { decision } = plan;
     const idle = { requestId, sent: 0, failed: 0, skipped: 0, plan };
@@ -191,6 +192,13 @@ export class WavesService {
     const shift = Math.max(0, timeoutMs - this.demoDelayMs);
     const cap = new Date(request.deadline).getTime() - 1;
     return new Date(Math.max(now.getTime(), Math.min(now.getTime() + shift, cap)));
+  }
+
+  /** AJOUT T8 : lancement manuel. Avance l'horloge du planificateur du délai de l'urgence, plafonné avant l'échéance. */
+  private forcedNow(request: BloodRequest, now: Date): Date {
+    const timeoutMs = waveTimeoutMinutes(toRulesUrgency(request.urgency)) * 60_000;
+    const cap = new Date(request.deadline).getTime() - 1;
+    return new Date(Math.max(now.getTime(), Math.min(now.getTime() + timeoutMs, cap)));
   }
 
   /** Un échec de planification est journalisé sans faire échouer la vague déjà envoyée. */

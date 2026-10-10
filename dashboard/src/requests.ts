@@ -44,3 +44,11 @@ export async function createRequest(d: NewRequest): Promise<RequestRow> {
     body: JSON.stringify({ bloodGroup: d.bloodGroup, quantity: d.quantity, urgency: d.urgency, deadline }),
   }))
 }
+
+export type WaveLaunch = { launched: true; waveNumber: number; radiusKm: number; sent: number }
+
+/** Lancement manuel de la vague suivante (hôpital, demande critique). */
+export async function launchWave(id: string): Promise<WaveLaunch> {
+  if (USE_MOCK) return { launched: true, waveNumber: 2, radiusKm: 10, sent: 0 }
+  return api<WaveLaunch>(`/requests/${id}/waves/launch`, { method: 'POST' })
+}
