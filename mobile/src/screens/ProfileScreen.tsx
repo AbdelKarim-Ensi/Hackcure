@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -18,6 +18,7 @@ import {
     Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { DonorProfile } from '../types/events';
@@ -25,15 +26,12 @@ import { getDonorProfile, updateDonorProfile } from '../services/eventService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
-// 🇹🇳 Liste des 24 Gouvernorats de Tunisie
 const TUNISIAN_GOVERNORATES = [
     'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa',
     'Jendouba', 'Kairouan', 'Kasserine', 'Kébili', 'Le Kef', 'Mahdia',
     'Manouba', 'Médenine', 'Monastir', 'Nabeul', 'Sfax', 'Sidi Bouzid',
     'Siliana', 'Sousse', 'Tataouine', 'Tozeur', 'Tunis', 'Zaghouan'
 ];
-
-// 🩸 Liste des groupes sanguins
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const DAYS_OF_WEEK = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -42,9 +40,30 @@ const MONTH_NAMES = [
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
-// ------------------------------------------------------------------
-// 💓 COMPOSANT ECG ANIMÉ FAÇON MONITEUR DE SANTÉ (BALAYAGE LUMINEUX)
-// ------------------------------------------------------------------
+// 🔒 CONVERTISSEUR DE DATE UNIFIÉ À MINUIT LOCAL (00:00:00.000)
+const toLocalMidnight = (dateOrStr?: string | Date | null): Date | null => {
+    if (!dateOrStr) return null;
+    if (dateOrStr instanceof Date) {
+        const d = new Date(dateOrStr);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+    const str = String(dateOrStr).trim();
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        return new Date(year, month, day, 0, 0, 0, 0);
+    }
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+        return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+    }
+    return null;
+};
+
+// 💓 COMPOSANT ECG ANIMÉ
 const ECG_PERIOD = 200;
 const ECG_HEIGHT = 44;
 const SWEEP_WIDTH = 150;
@@ -95,7 +114,7 @@ const AnimatedHeartbeat = () => {
     const sweepX = useRef(new Animated.Value(-SWEEP_WIDTH)).current;
     const innerX = useRef(Animated.multiply(sweepX, -1)).current;
 
-    useEffect(() => {
+    React.useEffect(() => {
         const loop = Animated.loop(
             Animated.sequence([
                 Animated.timing(sweepX, {
@@ -132,19 +151,17 @@ export const ProfileScreen = ({ navigation }: Props) => {
     const [token, setToken] = useState<string | null>(null);
     const [profile, setProfile] = useState<DonorProfile | null>(null);
 
-    // ✏️ ÉTATS MODIFIABLES DU PROFIL
+    // ✏️ ÉTATS DU PROFIL
     const [fullName, setFullName] = useState<string>('');
     const [sex, setSex] = useState<'homme' | 'femme'>('homme');
     const [bloodGroup, setBloodGroup] = useState<string>('O+');
+    const [lastDonationDate, setLastDonationDate] = useState<string>('');
     const [available, setAvailable] = useState<boolean>(true);
     const [zone, setZone] = useState<string>('Tunis');
     const [maxRadiusKm, setMaxRadiusKm] = useState<string>('20');
     const [alertsEnabled, setAlertsEnabled] = useState<boolean>(true);
 
-    // Modal Régions/Gouvernorats
     const [showZoneModal, setShowZoneModal] = useState<boolean>(false);
-
-    // État du Calendrier
     const [calendarDate, setCalendarDate] = useState<Date>(new Date());
 
     const loadProfile = useCallback(async () => {
@@ -159,12 +176,50 @@ export const ProfileScreen = ({ navigation }: Props) => {
             setToken(storedToken);
 
             const data = await getDonorProfile(storedToken);
-            setProfile(data);
 
-            // Charger les champs dans les états locaux
+            const currentSex = (data.sex as 'homme' | 'femme') || 'homme';
+            const donationStr = data.lastDonationDate || '';
+            const lastDonationMidnight = toLocalMidnight(donationStr);
+
+            const todayNow = new Date();
+            todayNow.setHours(0, 0, 0, 0);
+
+            let currentReevalStr = data.reevalDate || null;
+            let currentStatus = data.eligibilityStatus || 'en_attente';
+
+            // 🔒 CALCUL DU REPOS DE DON : HOMME = 2 MOIS / FEMME = 3 MOIS
+            if (lastDonationMidnight) {
+                const restMonths = currentSex === 'femme' ? 3 : 2;
+                const donationRestDate = new Date(lastDonationMidnight);
+                donationRestDate.setMonth(donationRestDate.getMonth() + restMonths);
+
+                const y = donationRestDate.getFullYear();
+                const m = String(donationRestDate.getMonth() + 1).padStart(2, '0');
+                const d = String(donationRestDate.getDate()).padStart(2, '0');
+                currentReevalStr = `${y}-${m}-${d}`;
+
+                if (donationRestDate <= todayNow) {
+                    if (currentStatus === 'temporaire') {
+                        currentStatus = 'eligible';
+                    }
+                } else {
+                    if (currentStatus === 'eligible') {
+                        currentStatus = 'temporaire';
+                    }
+                }
+            }
+
+            const refreshedProfile = {
+                ...data,
+                eligibilityStatus: currentStatus,
+                reevalDate: currentReevalStr,
+            };
+
+            setProfile(refreshedProfile);
             setFullName(data.fullName || '');
-            setSex((data.sex as 'homme' | 'femme') || 'homme');
+            setSex(currentSex);
             setBloodGroup(data.bloodGroup || 'O+');
+            setLastDonationDate(donationStr);
             setAvailable(data.available ?? true);
             setZone(data.zone || 'Tunis');
             setMaxRadiusKm(data.maxRadiusKm ? String(data.maxRadiusKm) : '20');
@@ -177,9 +232,11 @@ export const ProfileScreen = ({ navigation }: Props) => {
         }
     }, [navigation]);
 
-    useEffect(() => {
-        loadProfile();
-    }, [loadProfile]);
+    useFocusEffect(
+        useCallback(() => {
+            loadProfile();
+        }, [loadProfile])
+    );
 
     const handleSave = async () => {
         if (!token) return;
@@ -191,10 +248,40 @@ export const ProfileScreen = ({ navigation }: Props) => {
 
         try {
             setSaving(true);
+
+            let calculatedReeval = profile?.reevalDate || null;
+            let calculatedStatus = profile?.eligibilityStatus || 'eligible';
+
+            if (lastDonationDate.trim()) {
+                const parsedDonation = toLocalMidnight(lastDonationDate.trim());
+                if (parsedDonation) {
+                    const restMonths = sex === 'femme' ? 3 : 2;
+                    const donationRestDate = new Date(parsedDonation);
+                    donationRestDate.setMonth(donationRestDate.getMonth() + restMonths);
+
+                    const y = donationRestDate.getFullYear();
+                    const m = String(donationRestDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(donationRestDate.getDate()).padStart(2, '0');
+                    calculatedReeval = `${y}-${m}-${d}`;
+
+                    const todayNow = new Date();
+                    todayNow.setHours(0, 0, 0, 0);
+
+                    if (donationRestDate > todayNow) {
+                        calculatedStatus = 'temporaire';
+                    } else if (calculatedStatus === 'temporaire') {
+                        calculatedStatus = 'eligible';
+                    }
+                }
+            }
+
             const updated = await updateDonorProfile(token, {
                 fullName: fullName.trim(),
                 sex,
                 bloodGroup,
+                lastDonationDate: lastDonationDate.trim() || null,
+                reevalDate: calculatedReeval,
+                eligibilityStatus: calculatedStatus,
                 available,
                 zone: zone.trim(),
                 maxRadiusKm: parseInt(maxRadiusKm, 10) || 20,
@@ -214,24 +301,73 @@ export const ProfileScreen = ({ navigation }: Props) => {
         }
     };
 
-    // --- LOGIQUE DU CALENDRIER DE DON ---
-    const parseDateString = (dateStr?: string): Date | null => {
-        if (!dateStr) return null;
-        const parsed = new Date(dateStr);
-        if (!isNaN(parsed.getTime())) {
-            parsed.setHours(0, 0, 0, 0);
-            return parsed;
-        }
-        return null;
-    };
+    const lastDonationMidnight = toLocalMidnight(lastDonationDate || profile?.lastDonationDate);
 
-    const lastDonationDateObj = parseDateString(profile?.lastDonationDate);
-    const nextEligibleDateObj = parseDateString(profile?.nextDonationPossibleDate);
+    // Calcul de la date de réévaluation exacte pour le don
+    let donationRestMidnight: Date | null = null;
+    if (lastDonationMidnight) {
+        donationRestMidnight = new Date(lastDonationMidnight);
+        const restMonths = sex === 'femme' ? 3 : 2;
+        donationRestMidnight.setMonth(donationRestMidnight.getMonth() + restMonths);
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const isEligibleNow = !nextEligibleDateObj || nextEligibleDateObj <= today;
+    const rawStatus = profile?.eligibilityStatus || 'en_attente';
+    const isPastReeval = donationRestMidnight ? donationRestMidnight <= today : false;
+    const eligibilityStatus: 'eligible' | 'temporaire' | 'definitif' | 'en_attente' =
+        (rawStatus === 'temporaire' && isPastReeval) ? 'eligible' : rawStatus;
+
+    let bannerStyle = styles.statusBannerWaiting;
+    let textStyle = styles.textWaiting;
+    let bannerMessage = "";
+
+    if (eligibilityStatus === 'definitif') {
+        bannerStyle = styles.statusBannerDefinitif;
+        textStyle = styles.textDefinitif;
+        bannerMessage = "❌ Inéligible définitivement au don de sang (الاستمارة مرفوضة نهائياً)";
+    } else if (eligibilityStatus === 'en_attente') {
+        bannerStyle = styles.statusBannerWaiting;
+        textStyle = styles.textWaiting;
+        bannerMessage = "⚠️ Questionnaire non rempli. Veuillez remplir la fiche d'éligibilité.";
+    } else if (lastDonationMidnight && donationRestMidnight) {
+        const formattedDonation = lastDonationMidnight.toLocaleDateString('fr-FR');
+        const formattedReeval = donationRestMidnight.toLocaleDateString('fr-FR');
+        const restMonths = sex === 'femme' ? 3 : 2;
+
+        if (donationRestMidnight <= today) {
+            bannerStyle = styles.statusBannerEligible;
+            textStyle = styles.textEligible;
+            bannerMessage = `🩸 Dernier don le ${formattedDonation}. 🎉 Repos de ${restMonths} mois terminé, vous êtes éligible !`;
+        } else {
+            bannerStyle = styles.statusBannerWaiting;
+            textStyle = styles.textWaiting;
+            bannerMessage = `🩸 Dernier don le ${formattedDonation}. ⏳ Repos obligatoire (${restMonths} mois pour ${sex}) jusqu'au ${formattedReeval}.`;
+        }
+    } else if (eligibilityStatus === 'temporaire') {
+        const medicalReevalMidnight = toLocalMidnight(profile?.reevalDate);
+        if (medicalReevalMidnight) {
+            if (medicalReevalMidnight <= today) {
+                bannerStyle = styles.statusBannerEligible;
+                textStyle = styles.textEligible;
+                bannerMessage = "🎉 Votre période d'inactivité est terminée ! Vous êtes éligible aujourd'hui.";
+            } else {
+                const formattedDate = medicalReevalMidnight.toLocaleDateString('fr-FR');
+                bannerStyle = styles.statusBannerWaiting;
+                textStyle = styles.textWaiting;
+                bannerMessage = `⏳ Inéligible temporairement. Prochain don possible le ${formattedDate}`;
+            }
+        } else {
+            bannerStyle = styles.statusBannerWaiting;
+            textStyle = styles.textWaiting;
+            bannerMessage = "⏳ Inéligible temporairement. En attente de réévaluation médicale.";
+        }
+    } else if (eligibilityStatus === 'eligible') {
+        bannerStyle = styles.statusBannerEligible;
+        textStyle = styles.textEligible;
+        bannerMessage = "🎉 Vous êtes éligible pour donner du sang aujourd'hui !";
+    }
 
     const changeMonth = (increment: number) => {
         const newDate = new Date(calendarDate);
@@ -239,12 +375,13 @@ export const ProfileScreen = ({ navigation }: Props) => {
         setCalendarDate(newDate);
     };
 
+    // 🔒 CALCUL PARFAIT DU CALENDRIER JOUR PAR JOUR
     const generateCalendarDays = () => {
         const year = calendarDate.getFullYear();
         const month = calendarDate.getMonth();
 
-        const firstDayOfMonth = new Date(year, month, 1);
-        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const firstDayOfMonth = new Date(year, month, 1, 0, 0, 0, 0);
+        const lastDayOfMonth = new Date(year, month + 1, 0, 0, 0, 0, 0);
 
         let startingDay = firstDayOfMonth.getDay() - 1;
         if (startingDay === -1) startingDay = 6;
@@ -256,19 +393,59 @@ export const ProfileScreen = ({ navigation }: Props) => {
             days.push({ day: null, date: null, isEligible: false, isLastDonation: false, isToday: false });
         }
 
-        for (let i = 1; i <= daysInMonth; i++) {
-            const currentDate = new Date(year, month, i);
-            currentDate.setHours(0, 0, 0, 0);
+        const medicalReevalMidnight = toLocalMidnight(profile?.reevalDate);
 
+        for (let i = 1; i <= daysInMonth; i++) {
+            const currentDate = new Date(year, month, i, 0, 0, 0, 0);
             const currentTime = currentDate.getTime();
 
-            const isLastDonation = Boolean(lastDonationDateObj && currentTime === lastDonationDateObj.getTime());
-            const isEligible = isLastDonation || (nextEligibleDateObj ? currentTime >= nextEligibleDateObj.getTime() : true);
+            const isLastDonation = Boolean(
+                lastDonationMidnight && currentTime === lastDonationMidnight.getTime()
+            );
+
+            let isDayEligible = false;
+
+            if (eligibilityStatus === 'definitif' || eligibilityStatus === 'en_attente') {
+                isDayEligible = false;
+            } else if (lastDonationMidnight && donationRestMidnight) {
+                const donationTime = lastDonationMidnight.getTime();
+                const restTime = donationRestMidnight.getTime();
+
+                if (currentTime < donationTime) {
+                    // 🟢 1. AVANT la date du don = VERT (Éligible)
+                    isDayEligible = true;
+                } else if (currentTime === donationTime) {
+                    // 🔴 2. Jour du don = ROUGE (avec l'icône 🩸)
+                    isDayEligible = false;
+                } else if (currentTime < restTime) {
+                    // 🔴 3. Pendant le repos obligatoire (2 mois homme / 3 mois femme) = ROUGE
+                    isDayEligible = false;
+                } else {
+                    // 4. Après la fin du repos de don
+                    if (medicalReevalMidnight && currentTime < medicalReevalMidnight.getTime()) {
+                        isDayEligible = false;
+                    } else {
+                        isDayEligible = true; // 🟢 VERT : Ré-éligible !
+                    }
+                }
+            } else if (eligibilityStatus === 'temporaire') {
+                if (medicalReevalMidnight) {
+                    isDayEligible = currentTime >= medicalReevalMidnight.getTime();
+                } else {
+                    isDayEligible = false;
+                }
+            } else if (eligibilityStatus === 'eligible') {
+                if (medicalReevalMidnight && currentTime < medicalReevalMidnight.getTime()) {
+                    isDayEligible = false;
+                } else {
+                    isDayEligible = true;
+                }
+            }
 
             days.push({
                 day: i,
                 date: currentDate,
-                isEligible,
+                isEligible: isDayEligible,
                 isLastDonation,
                 isToday: currentTime === today.getTime(),
             });
@@ -291,7 +468,7 @@ export const ProfileScreen = ({ navigation }: Props) => {
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                {/* 🩸 BANNIÈRE PROFIL CHARLES NICOLLE */}
+                {/* 🩸 BANNIÈRE PROFIL */}
                 <View style={headerStyles.headerBanner}>
                     <View style={headerStyles.topRow}>
                         <View style={headerStyles.brandContainer}>
@@ -306,7 +483,7 @@ export const ProfileScreen = ({ navigation }: Props) => {
                     </View>
 
                     <Text style={headerStyles.brandSubtitle}>
-                        Chque goutte compte.
+                        Chaque goutte compte.
                     </Text>
 
                     <View style={headerStyles.profileHeroCard}>
@@ -316,30 +493,83 @@ export const ProfileScreen = ({ navigation }: Props) => {
                         <Text style={headerStyles.fullName}>{fullName || 'Donneur'}</Text>
                         <Text style={headerStyles.phoneText}>📞 {profile?.phone ? profile.phone : 'Non renseigné'}</Text>
 
+                        <Text style={headerStyles.lastDonationHeroText}>
+                            {lastDonationMidnight
+                                ? `🩸 Dernier don : ${lastDonationMidnight.toLocaleDateString('fr-FR')} (${sex === 'femme' ? 'repos 3 mois' : 'repos 2 mois'})`
+                                : '🩸 Aucun don enregistré'}
+                        </Text>
+
                         <View style={headerStyles.inlineBadges}>
                             <View style={headerStyles.subBadge}>
                                 <Text style={headerStyles.subBadgeText}>Sexe: {sex}</Text>
                             </View>
-                            {profile?.bloodGroupConfirmed ? (
-                                <View style={[headerStyles.subBadge, { backgroundColor: '#DCFCE7' }]}>
-                                    <Text style={[headerStyles.subBadgeText, { color: '#16A34A' }]}>✓ Sang Confirmé</Text>
-                                </View>
-                            ) : null}
+
+                            <View style={[
+                                headerStyles.subBadge,
+                                eligibilityStatus === 'eligible' && { backgroundColor: '#DCFCE7' },
+                                eligibilityStatus === 'temporaire' && { backgroundColor: '#FEF3C7' },
+                                eligibilityStatus === 'definitif' && { backgroundColor: '#FEE2E2' },
+                                eligibilityStatus === 'en_attente' && { backgroundColor: '#E2E8F0' },
+                            ]}>
+                                <Text style={[
+                                    headerStyles.subBadgeText,
+                                    eligibilityStatus === 'eligible' && { color: '#15803D' },
+                                    eligibilityStatus === 'temporaire' && { color: '#B45309' },
+                                    eligibilityStatus === 'definitif' && { color: '#B91C1C' },
+                                    eligibilityStatus === 'en_attente' && { color: '#475569' },
+                                ]}>
+                                    {eligibilityStatus === 'eligible' && '✅ Éligible'}
+                                    {eligibilityStatus === 'temporaire' && '⏳ Temporaire'}
+                                    {eligibilityStatus === 'definitif' && '❌ Définitif'}
+                                    {eligibilityStatus === 'en_attente' && '⚠️ Non rempli'}
+                                </Text>
+                            </View>
                         </View>
                     </View>
 
                     <AnimatedHeartbeat />
                 </View>
 
+                {/* 📋 QUESTIONNAIRE D'ÉLIGIBILITÉ */}
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>📋 Questionnaire d'Éligibilité (استمارة الأهلية)</Text>
+                    <Text style={styles.questionnaireSubText}>
+                        Mettez à jour vos informations médicales pour recalculer votre éligibilité.
+                    </Text>
+
+                    {eligibilityStatus === 'definitif' ? (
+                        <View style={styles.lockedNotice}>
+                            <Text style={styles.lockedNoticeText}>
+                                🔒 Votre profil est inéligible de façon définitive. La re-soumission est bloquée conformément aux directives médicales.
+                            </Text>
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.questionnaireButton}
+                            onPress={() => {
+                                navigation.navigate('Eligibility' as any, {
+                                    accessToken: token,
+                                    user: profile,
+                                });
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.questionnaireButtonText}>
+                                {eligibilityStatus === 'en_attente'
+                                    ? '📝 Remplir le questionnaire'
+                                    : '🔄 Refaire le questionnaire d\'éligibilité'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
                 {/* 📅 CALENDRIER INTERACTIF & ÉLIGIBILITÉ */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>📅 Calendrier d'Éligibilité au Don</Text>
 
-                    <View style={[styles.statusBanner, isEligibleNow ? styles.statusBannerEligible : styles.statusBannerWaiting]}>
-                        <Text style={[styles.statusBannerTitle, isEligibleNow ? styles.textEligible : styles.textWaiting]}>
-                            {isEligibleNow
-                                ? "🎉 Vous êtes éligible pour donner du sang aujourd'hui !"
-                                : `⏳ Prochain don possible à partir du ${nextEligibleDateObj ? nextEligibleDateObj.toLocaleDateString('fr-FR') : 'inconnue'}`}
+                    <View style={[styles.statusBanner, bannerStyle]}>
+                        <Text style={[styles.statusBannerTitle, textStyle]}>
+                            {bannerMessage}
                         </Text>
                     </View>
 
@@ -398,20 +628,59 @@ export const ProfileScreen = ({ navigation }: Props) => {
                     <View style={styles.legendContainer}>
                         <View style={styles.legendItem}>
                             <View style={[styles.legendColor, { backgroundColor: '#DCFCE7', borderColor: '#16A34A' }]} />
-                            <Text style={styles.legendText}>🟢 Dernier don (🩸) & Éligible</Text>
+                            <Text style={styles.legendText}>🟢 Période d'éligibilité (Avant le don & Après le repos)</Text>
                         </View>
                         <View style={styles.legendItem}>
-                            <View style={[styles.legendColor, { backgroundColor: '#FEF2F2', borderColor: '#901818' }]} />
-                            <Text style={styles.legendText}>🔴 Repos obligatoire</Text>
+                            <View style={[styles.legendColor, { backgroundColor: '#FEE2E2', borderColor: '#901818' }]} />
+                            <Text style={styles.legendText}>🩸 Jour du don (Rouge + Goutte de sang)</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                            <View style={[styles.legendColor, { backgroundColor: '#FEF2F2', borderColor: '#EF4444' }]} />
+                            <Text style={styles.legendText}>🔴 Repos obligatoire ({sex === 'femme' ? '3 mois' : '2 mois'})</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* ⚙️ INFORMATIONS PERSONNELLES & PRÉFÉRENCES (MODIFIABLES) */}
+                {/* ⚙️ INFORMATIONS PERSONNELLES & PRÉFÉRENCES */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>⚙️ Mes Informations & Préférences</Text>
 
-                    {/* 👤 CHAMP NOM ET PRÉNOM */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Statut d'Éligibilité Actuel</Text>
+                        <View style={[
+                            styles.eligibilityFieldBox,
+                            eligibilityStatus === 'eligible' && styles.eligibilityBoxEligible,
+                            eligibilityStatus === 'temporaire' && styles.eligibilityBoxTemporaire,
+                            eligibilityStatus === 'definitif' && styles.eligibilityBoxDefinitif,
+                            eligibilityStatus === 'en_attente' && styles.eligibilityBoxWaiting,
+                        ]}>
+                            <Text style={styles.eligibilityFieldTitle}>
+                                {eligibilityStatus === 'eligible' && '✅ Éligible au don de sang'}
+                                {eligibilityStatus === 'temporaire' && '⏳ Inéligible temporairement'}
+                                {eligibilityStatus === 'definitif' && '❌ Inéligible définitivement'}
+                                {eligibilityStatus === 'en_attente' && '⚠️ Questionnaire en attente'}
+                            </Text>
+                            <Text style={styles.eligibilityFieldSub}>
+                                {lastDonationMidnight
+                                    ? `Dernier don : ${lastDonationMidnight.toLocaleDateString('fr-FR')}. Intervalle légal (${sex === 'femme' ? '3 mois' : '2 mois'}). ${donationRestMidnight ? `Prochain don le : ${donationRestMidnight.toLocaleDateString('fr-FR')}` : ''}`
+                                    : (eligibilityStatus === 'eligible'
+                                        ? 'Vous pouvez vous inscrire aux collectes et recevoir les alertes d’urgence.'
+                                        : 'En attente de mise à jour.')}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Date du Dernier Don (Format AAAA-MM-JJ)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={lastDonationDate}
+                            onChangeText={setLastDonationDate}
+                            placeholder="Exemple: 2026-08-10"
+                            placeholderTextColor="#94A3B8"
+                        />
+                    </View>
+
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Nom & Prénom</Text>
                         <TextInput
@@ -423,7 +692,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                         />
                     </View>
 
-                    {/* 🩸 SÉLECTION DU GROUPE SANGUIN */}
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Groupe Sanguin</Text>
                         <View style={styles.bloodGridContainer}>
@@ -445,9 +713,8 @@ export const ProfileScreen = ({ navigation }: Props) => {
                         </View>
                     </View>
 
-                    {/* 🚻 SÉLECTION DU SEXE */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Sexe</Text>
+                        <Text style={styles.inputLabel}>Sexe (Règle d'intervalle entre dons)</Text>
                         <View style={styles.sexSelectorContainer}>
                             <TouchableOpacity
                                 style={[styles.sexChip, sex === 'homme' && styles.sexChipSelected]}
@@ -533,7 +800,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Bouton Déconnexion */}
                 <TouchableOpacity
                     style={styles.logoutButton}
                     onPress={async () => {
@@ -545,7 +811,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* 🇹🇳 MODAL LISTE DÉROULANTE DES 24 GOUVERNORATS */}
             <Modal visible={showZoneModal} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -581,7 +846,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                 </View>
             </Modal>
 
-            {/* 🏠 BARRE DE NAVIGATION INFÉRIEURE */}
             <View style={styles.bottomTabBar}>
                 <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
                     <Text style={styles.navIcon}>🏠</Text>
@@ -607,7 +871,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
     );
 };
 
-// --- STYLES BATTEMENT ECG ---
 const heartbeatStyles = StyleSheet.create({
     container: {
         height: ECG_HEIGHT,
@@ -630,7 +893,6 @@ const heartbeatStyles = StyleSheet.create({
     },
 });
 
-// --- STYLES BANNIÈRE CHARLES NICOLLE ---
 const headerStyles = StyleSheet.create({
     headerBanner: {
         backgroundColor: '#901818',
@@ -725,12 +987,12 @@ const headerStyles = StyleSheet.create({
     avatarText: { color: '#901818', fontSize: 24, fontWeight: '900' },
     fullName: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
     phoneText: { fontSize: 13, color: '#FECACA', marginTop: 2 },
-    inlineBadges: { flexDirection: 'row', gap: 8, marginTop: 10 },
+    lastDonationHeroText: { fontSize: 13, color: '#FFFFFF', fontWeight: 'bold', marginTop: 4 },
+    inlineBadges: { flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' },
     subBadge: { backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
     subBadgeText: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
 });
 
-// --- STYLES DE L'APPLICATION ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -750,16 +1012,45 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 3,
     },
-    cardTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginBottom: 14 },
+    cardTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
+
+    questionnaireSubText: { fontSize: 12, color: '#64748B', marginBottom: 12 },
+    questionnaireButton: {
+        backgroundColor: '#901818',
+        paddingVertical: 13,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    questionnaireButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    lockedNotice: {
+        backgroundColor: '#FEF2F2',
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#FCA5A5',
+    },
+    lockedNoticeText: {
+        color: '#991B1B',
+        fontSize: 12,
+        textAlign: 'center',
+        fontWeight: '600',
+        lineHeight: 18,
+    },
 
     statusBanner: { padding: 12, borderRadius: 12, marginBottom: 14, alignItems: 'center' },
     statusBannerEligible: { backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#4ADE80' },
     statusBannerWaiting: { backgroundColor: '#FFEDD5', borderWidth: 1, borderColor: '#FDBA74' },
+    statusBannerDefinitif: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#EF4444' },
     statusBannerTitle: { fontSize: 13, fontWeight: 'bold', textAlign: 'center' },
     textEligible: { color: '#16A34A' },
     textWaiting: { color: '#C2410C' },
+    textDefinitif: { color: '#991B1B' },
 
-    // --- STYLES DU CALENDRIER ---
     calendarHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -770,10 +1061,8 @@ const styles = StyleSheet.create({
     calendarTitle: { fontSize: 15, fontWeight: 'bold', color: '#1E293B' },
     monthNavBtn: { padding: 8, backgroundColor: '#F1F5F9', borderRadius: 10 },
     monthNavText: { fontSize: 14, color: '#901818', fontWeight: 'bold' },
-
     weekDaysRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 },
     weekDayText: { width: 36, textAlign: 'center', fontSize: 12, fontWeight: 'bold', color: '#64748B' },
-
     daysGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
     dayBoxEmpty: { width: '14.28%', height: 42 },
     dayBox: {
@@ -786,94 +1075,73 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     dayBoxEligible: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
-    dayBoxIneligible: { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' },
-    dayBoxLastDonation: { backgroundColor: '#BBF7D0', borderColor: '#16A34A', borderWidth: 2 },
-    dayBoxToday: { borderWidth: 2.5, borderColor: '#1E293B' },
+    dayBoxIneligible: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+    dayBoxLastDonation: { backgroundColor: '#FEE2E2', borderColor: '#901818', borderWidth: 1.5 },
+    dayBoxToday: { borderWidth: 2, borderColor: '#2563EB' },
+    dayText: { fontSize: 13, fontWeight: 'bold' },
+    dayTextEligible: { color: '#15803D' },
+    dayTextIneligible: { color: '#991B1B' },
+    dayTextLastDonation: { color: '#901818' },
+    dayTextToday: { color: '#2563EB' },
+    lastDonationIcon: { fontSize: 10, marginTop: -2 },
 
-    dayText: { fontSize: 12, fontWeight: 'bold' },
-    dayTextEligible: { color: '#16A34A' },
-    dayTextIneligible: { color: '#901818' },
-    dayTextLastDonation: { color: '#14532D', fontWeight: '900' },
-    dayTextToday: { textDecorationLine: 'underline' },
-    lastDonationIcon: { fontSize: 9, marginTop: -2 },
-
-    legendContainer: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-    legendItem: { flexDirection: 'row', alignItems: 'center' },
-    legendColor: { width: 14, height: 14, borderRadius: 4, borderWidth: 1, marginRight: 6 },
+    legendContainer: { marginTop: 12, gap: 6 },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    legendColor: { width: 14, height: 14, borderRadius: 4, borderWidth: 1 },
     legendText: { fontSize: 12, color: '#475569', fontWeight: '600' },
 
-    // --- STYLES PRÉFÉRENCES & FORMULAIRE ---
-    settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 10 },
-    settingLabel: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
-    settingSub: { fontSize: 12, color: '#64748B' },
-
-    inputGroup: { marginVertical: 8 },
-    inputLabel: { fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 },
+    inputGroup: { marginBottom: 14 },
+    inputLabel: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 },
     input: {
         backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#CBD5E1',
-        borderRadius: 10,
-        paddingHorizontal: 12,
+        borderRadius: 12,
+        paddingHorizontal: 14,
         paddingVertical: 10,
         fontSize: 14,
         color: '#0F172A',
     },
 
-    // Grille pour le groupe sanguin
-    bloodGridContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
+    eligibilityFieldBox: { padding: 12, borderRadius: 12, borderWidth: 1 },
+    eligibilityBoxEligible: { backgroundColor: '#ECFDF5', borderColor: '#10B981' },
+    eligibilityBoxTemporaire: { backgroundColor: '#FFFBEB', borderColor: '#F59E0B' },
+    eligibilityBoxDefinitif: { backgroundColor: '#FEF2F2', borderColor: '#EF4444' },
+    eligibilityBoxWaiting: { backgroundColor: '#F3F4F6', borderColor: '#9CA3AF' },
+    eligibilityFieldTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#1E293B' },
+    eligibilityFieldSub: { fontSize: 12, color: '#475569', lineHeight: 16 },
+
+    bloodGridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     bloodChip: {
-        width: '23%',
+        width: '22%',
         paddingVertical: 10,
-        borderRadius: 10,
+        backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#CBD5E1',
-        backgroundColor: '#F8FAFC',
+        borderRadius: 10,
         alignItems: 'center',
     },
-    bloodChipSelected: {
-        backgroundColor: '#901818',
-        borderColor: '#901818',
-    },
-    bloodChipText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#334155',
-    },
-    bloodChipTextSelected: {
-        color: '#FFFFFF',
-    },
+    bloodChipSelected: { backgroundColor: '#901818', borderColor: '#901818' },
+    bloodChipText: { fontSize: 14, fontWeight: 'bold', color: '#475569' },
+    bloodChipTextSelected: { color: '#FFFFFF' },
 
-    sexSelectorContainer: {
-        flexDirection: 'row',
-        gap: 10,
-    },
+    sexSelectorContainer: { flexDirection: 'row', gap: 10 },
     sexChip: {
         flex: 1,
-        paddingVertical: 11,
-        borderRadius: 10,
+        paddingVertical: 10,
+        backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#CBD5E1',
-        backgroundColor: '#F8FAFC',
+        borderRadius: 10,
         alignItems: 'center',
     },
-    sexChipSelected: {
-        backgroundColor: '#901818',
-        borderColor: '#901818',
-    },
-    sexChipText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    sexChipTextSelected: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-    },
+    sexChipSelected: { backgroundColor: '#901818', borderColor: '#901818' },
+    sexChipText: { fontSize: 14, fontWeight: 'bold', color: '#475569' },
+    sexChipTextSelected: { color: '#FFFFFF' },
+
+    settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+    settingLabel: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+    settingSub: { fontSize: 12, color: '#64748B' },
 
     dropdownSelector: {
         flexDirection: 'row',
@@ -882,65 +1150,56 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#CBD5E1',
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 11,
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
     },
-    dropdownSelectorText: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+    dropdownSelectorText: { fontSize: 14, color: '#0F172A', fontWeight: '600' },
     dropdownArrow: { fontSize: 12, color: '#64748B' },
 
     saveButton: {
         backgroundColor: '#901818',
-        paddingVertical: 12,
-        borderRadius: 12,
+        paddingVertical: 14,
+        borderRadius: 14,
         alignItems: 'center',
-        marginTop: 16,
-        shadowColor: '#901818',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 5,
-        elevation: 3,
+        marginTop: 10,
     },
-    saveButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
+    saveButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
 
     logoutButton: {
         backgroundColor: '#FEF2F2',
-        paddingVertical: 12,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 4,
         borderWidth: 1,
         borderColor: '#FCA5A5',
+        paddingVertical: 14,
+        borderRadius: 14,
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginBottom: 20,
     },
-    logoutButtonText: { color: '#901818', fontWeight: 'bold', fontSize: 14 },
+    logoutButtonText: { color: '#901818', fontSize: 15, fontWeight: 'bold' },
 
-    // --- MODAL STYLES ---
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '70%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-    modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#0F172A' },
-    modalCloseText: { fontSize: 18, fontWeight: 'bold', color: '#64748B', padding: 4 },
-
-    regionItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    regionItemSelected: { backgroundColor: '#FEF2F2', borderRadius: 8 },
-    regionText: { fontSize: 15, color: '#334155', fontWeight: '500' },
+    modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B' },
+    modalCloseText: { fontSize: 18, color: '#64748B', fontWeight: 'bold' },
+    regionItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    regionItemSelected: { backgroundColor: '#FEF2F2' },
+    regionText: { fontSize: 15, color: '#334155' },
     regionTextSelected: { color: '#901818', fontWeight: 'bold' },
-    checkMark: { color: '#901818', fontWeight: 'bold', fontSize: 16 },
+    checkMark: { color: '#901818', fontWeight: 'bold' },
 
-    // --- BARRE DE NAVIGATION INFÉRIEURE ---
     bottomTabBar: {
         flexDirection: 'row',
+        justifyContent: 'space-around',
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: '#E2E8F0',
         paddingVertical: 10,
-        justifyContent: 'space-around',
-        alignItems: 'center',
     },
     navItem: { alignItems: 'center' },
-    navIcon: { fontSize: 20, opacity: 0.6 },
-    navIconActive: { opacity: 1 },
-    navLabel: { fontSize: 11, color: '#64748B', marginTop: 3 },
+    navIcon: { fontSize: 20, color: '#64748B' },
+    navIconActive: { color: '#901818' },
+    navLabel: { fontSize: 11, color: '#64748B', marginTop: 2 },
     navLabelActive: { color: '#901818', fontWeight: 'bold' },
 });
