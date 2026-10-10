@@ -1,15 +1,18 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { ApiError } from './api'
 import { PROFILES, useProfile } from './profiles'
-import { events0, level, stocks, type EventItem, type Stock } from './data'
+import { events0, type EventItem } from './data'
+import { GROUPS, listRequests, show, URGENCIES, type RequestRow } from './requests'
+import { addStock, bySeverity, LEVELS, useStocks, type Stock } from './stocks'
 
 function StockTile({ s }: { s: Stock }) {
-  const l = level(s)
+  const l = LEVELS[s.level]
   const pct = Math.min(100, Math.round((s.qty / (s.threshold * 2)) * 100))
   return (
     <article className="relative flex min-h-40 flex-col justify-between overflow-hidden rounded-2xl border border-line bg-serum p-4">
       <div className={`absolute inset-x-0 bottom-0 opacity-20 ${l.fill}`} style={{ height: `${pct}%` }} aria-hidden="true" />
-      <p className="relative font-display text-3xl font-bold leading-none">{s.group}</p>
+      <p className="relative font-display text-3xl font-bold leading-none">{show(s.group)}</p>
       <div className="relative space-y-2">
         <div className="text-sm leading-snug text-muted">
           <p><span className="font-semibold text-ink">{s.qty}</span> poches</p>
@@ -25,17 +28,6 @@ const StockGrid = ({ list }: { list: Stock[] }) => (
     {list.map((s) => <StockTile key={s.group} s={s} />)}
   </div>
 )
-
-function Ring({ done, total }: { done: number; total: number }) {
-  const c = 2 * Math.PI * 44
-  return (
-    <svg viewBox="0 0 100 100" className="h-28 w-28 shrink-0 -rotate-90" role="img" aria-label={`${done} unités couvertes sur ${total}`}>
-      <circle cx="50" cy="50" r="44" fill="none" strokeWidth="9" className="stroke-primary-soft" />
-      <circle cx="50" cy="50" r="44" fill="none" strokeWidth="9" strokeLinecap="round" className="stroke-primary"
-        strokeDasharray={c} strokeDashoffset={c * (1 - done / total)} />
-    </svg>
-  )
-}
 
 const fmt = (d: string) => new Date(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -54,10 +46,41 @@ function EventRow({ e }: { e: EventItem }) {
   )
 }
 
+// Demande active réelle de l'établissement (le suivi des donneurs en route arrive à l'étape suivante).
+function CurrentRequest() {
+  const [req, setReq] = useState<RequestRow | null | undefined>(undefined)
+  useEffect(() => {
+    listRequests().then((rs) => setReq(rs.find((r) => r.status === 'active') ?? null)).catch(() => setReq(null))
+  }, [])
+  const urgency = URGENCIES.find((u) => u.key === req?.urgency)?.label.toLowerCase()
+  return (
+    <section className="rounded-2xl border border-line bg-serum p-6">
+      <h2 className="font-display text-xl font-semibold">Demande en cours</h2>
+      {req === undefined && <p className="mt-4 text-muted">Chargement…</p>}
+      {req === null && <p className="mt-4 text-muted">Aucune demande en cours.</p>}
+      {req && (
+        <div className="mt-4">
+          <p className="font-display text-7xl font-bold leading-none text-primary">{show(req.group)}</p>
+          <p className="mt-2 text-muted">{req.qty} unité{req.qty > 1 ? 's' : ''}, urgence {urgency}</p>
+        </div>
+      )}
+      <Link to="/demandes/nouvelle" className="mt-5 block rounded-xl bg-primary px-4 py-3 text-center font-semibold text-white hover:bg-primary-dark">
+        Créer une demande
+      </Link>
+    </section>
+  )
+}
+
 export function Home() {
   const { profile, orgName } = useProfile()
   const p = PROFILES[profile]
   const collect = profile === 'centre_transfusion' || profile === 'croissant_rouge'
+  const wantsStocks = profile === 'hopital' || profile === 'banque_sang'
+  const { list, error } = useStocks()
+  const stocks = wantsStocks ? list : []
+  const watch = (stocks ?? []).filter((s) => s.level !== 'vert').sort(bySeverity).slice(0, 4)
+  const below = (stocks ?? []).filter((s) => s.level === 'rouge').length
+
   return (
     <div className="space-y-8">
       <div>
@@ -67,32 +90,25 @@ export function Home() {
 
       {profile === 'hopital' && (
         <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
-          <section className="rounded-2xl border border-line bg-serum p-6">
-            <h2 className="font-display text-xl font-semibold">Demande en cours</h2>
-            <div className="mt-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="font-display text-7xl font-bold leading-none text-primary">O−</p>
-                <p className="mt-2 text-muted">4 unités, urgence critique</p>
-              </div>
-              <div className="relative shrink-0"><Ring done={3} total={4} />
-                <p className="absolute inset-0 grid place-items-center font-display text-xl font-bold">3/4</p></div>
-            </div>
-            <p className="mt-4 text-sm"><span className="me-2 inline-block h-2 w-2 rounded-full bg-vein" />Donneur O− · 4 km · en route</p>
-            <Link to="/demandes/nouvelle" className="mt-5 block rounded-xl bg-primary px-4 py-3 text-center font-semibold text-white hover:bg-primary-dark">
-              Créer une demande
-            </Link>
+          <CurrentRequest />
+          <section>
+            <h2 className="mb-3 font-display text-xl font-semibold">Groupes à surveiller</h2>
+            {stocks === null && <p className="text-muted">Chargement…</p>}
+            {error && <p role="alert" className="text-primary-dark">Impossible de charger les stocks.</p>}
+            {stocks && !error && watch.length === 0 && <p className="text-muted">Tous les groupes sont au-dessus de leur seuil.</p>}
+            {watch.length > 0 && <StockGrid list={watch} />}
           </section>
-          <section><h2 className="mb-3 font-display text-xl font-semibold">Groupes à surveiller</h2>
-            <StockGrid list={stocks.filter((s) => level(s).label !== 'Normal').slice(0, 4)} /></section>
         </div>
       )}
 
       {profile === 'banque_sang' && (
         <section>
           <h2 className="mb-3 font-display text-xl font-semibold">
-            {stocks.filter((s) => level(s).label !== 'Normal').length} groupes sous le seuil
+            {below === 0 ? 'Aucun groupe sous le seuil' : `${below} groupe${below > 1 ? 's' : ''} sous le seuil`}
           </h2>
-          <StockGrid list={stocks} />
+          {stocks === null && <p className="text-muted">Chargement…</p>}
+          {error && <p role="alert" className="text-primary-dark">Impossible de charger les stocks.</p>}
+          {stocks && <StockGrid list={stocks} />}
         </section>
       )}
 
@@ -115,7 +131,63 @@ export function Home() {
 }
 
 export function Stocks() {
-  return <section><h1 className="mb-4 font-display text-2xl font-bold">Stocks par groupe</h1><StockGrid list={stocks} /></section>
+  const { profile } = useProfile()
+  const canAdd = profile === 'hopital' || profile === 'banque_sang'
+  const { list, setList, error } = useStocks()
+  const [group, setGroup] = useState<string>(GROUPS[0])
+  const [qty, setQty] = useState(1)
+  const [threshold, setThreshold] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const submit = async (ev: FormEvent) => {
+    ev.preventDefault()
+    if (!Number.isInteger(qty) || qty < 1 || qty > 500) { setMsg({ ok: false, text: 'Indiquez entre 1 et 500 poches.' }); return }
+    const t = threshold === '' ? undefined : Number(threshold)
+    if (t !== undefined && (!Number.isInteger(t) || t < 1 || t > 1000)) { setMsg({ ok: false, text: 'Le seuil doit être entre 1 et 1000.' }); return }
+    setBusy(true); setMsg(null)
+    try {
+      setList(await addStock({ bloodGroup: group, quantity: qty, alertThreshold: t }))
+      setMsg({ ok: true, text: `${qty} poche${qty > 1 ? 's' : ''} ${show(group)} ajoutée${qty > 1 ? 's' : ''}.` })
+      setQty(1); setThreshold('')
+    } catch (err) {
+      const s = err instanceof ApiError ? err.status : 0
+      setMsg({ ok: false, text: s === 403 ? "Votre établissement n'est pas autorisé à modifier ce stock."
+        : s === 400 ? 'Valeurs refusées : vérifiez les champs.' : "Impossible d'ajouter le stock, réessayez." })
+    } finally { setBusy(false) }
+  }
+
+  const input = 'mt-1 w-full rounded-lg border border-line bg-plasma px-3 py-2'
+  return (
+    <div className={canAdd ? 'grid gap-6 lg:grid-cols-[1fr_1.6fr]' : ''}>
+      {canAdd && (
+        <form onSubmit={submit} noValidate className="h-fit space-y-3 rounded-2xl border border-line bg-serum p-6">
+          <h2 className="font-display text-xl font-semibold">Ajouter du stock</h2>
+          <label className="block text-sm">Groupe sanguin
+            <select value={group} onChange={(e) => setGroup(e.target.value)} className={input}>
+              {GROUPS.map((g) => <option key={g} value={g}>{show(g)}</option>)}
+            </select>
+          </label>
+          <label className="block text-sm">Poches à ajouter
+            <input type="number" min={1} max={500} value={qty} onChange={(e) => setQty(e.target.valueAsNumber)} className={input} />
+          </label>
+          <label className="block text-sm">Nouveau seuil d'alerte (facultatif)
+            <input type="number" min={1} max={1000} value={threshold} onChange={(e) => setThreshold(e.target.value)} className={input} />
+          </label>
+          {msg && <p role="alert" className={`text-sm font-medium ${msg.ok ? 'text-success' : 'text-primary-dark'}`}>{msg.text}</p>}
+          <button type="submit" disabled={busy} className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white hover:bg-primary-dark disabled:opacity-60">
+            {busy ? 'Ajout…' : 'Ajouter au stock'}
+          </button>
+        </form>
+      )}
+      <section>
+        <h1 className="mb-4 font-display text-2xl font-bold">Stocks par groupe</h1>
+        {list === null && <p className="text-muted">Chargement…</p>}
+        {error && <p role="alert" className="text-primary-dark">Impossible de charger les stocks.</p>}
+        {list && list.length > 0 && <StockGrid list={list} />}
+      </section>
+    </div>
+  )
 }
 
 export function Events() {
