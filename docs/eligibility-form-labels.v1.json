@@ -1,0 +1,184 @@
+{
+  "version": "v1",
+  "alignedWith": "EligibilityFormDto (backend/src/donors/dto/donors.dto.ts), QUESTIONNAIRE_VERSION 'v1'",
+  "languages": [
+    "fr",
+    "ar"
+  ],
+  "note": "Textes d'affichage uniquement. Les clés `field` sont celles de M1 ; le contrat d'API reste celui du DTO.",
+  "intro": {
+    "fr": "Ces questions permettent de vérifier que le don est sans risque pour vous et pour le patient. Vos réponses sont confidentielles et ne sont vues que par le personnel médical autorisé. La décision finale est prise par l'équipe médicale le jour du don.",
+    "ar": "تساعدنا هذه الأسئلة على التأكد من أن التبرع آمن لك وللمريض. إجاباتك سرية ولا يطّلع عليها إلا الطاقم الطبي المخوَّل. ويتخذ الفريق الطبي القرار النهائي يوم التبرع."
+  },
+  "sensitiveNotice": {
+    "fr": "Question confidentielle. Répondez avec sincérité : cela protège les patients.",
+    "ar": "سؤال سرّي. أجب بصدق، فذلك يحمي المرضى."
+  },
+  "recentHelp": {
+    "fr": "Répondez « Oui » si c'est arrivé récemment : l'application calcule la date à laquelle vous pourrez donner.",
+    "ar": "أجب بـ«نعم» إذا حدث ذلك مؤخرًا؛ سيحسب التطبيق التاريخ الذي يمكنك فيه التبرع."
+  },
+  "labels": {
+    "yes": {
+      "fr": "Oui",
+      "ar": "نعم"
+    },
+    "no": {
+      "fr": "Non",
+      "ar": "لا"
+    }
+  },
+  "fields": [
+    {
+      "field": "age",
+      "type": "number",
+      "required": true,
+      "min": 0,
+      "max": 120,
+      "unit": {
+        "fr": "ans",
+        "ar": "سنة"
+      },
+      "label": {
+        "fr": "Quel est votre âge ?",
+        "ar": "كم عمرك؟"
+      },
+      "help": {
+        "fr": "Un âge minimum et un âge maximum s'appliquent au don de sang.",
+        "ar": "يوجد حدّ أدنى وحدّ أقصى للسن للتبرع بالدم."
+      }
+    },
+    {
+      "field": "weightKg",
+      "type": "number",
+      "required": true,
+      "min": 30,
+      "max": 250,
+      "unit": {
+        "fr": "kg",
+        "ar": "كغ"
+      },
+      "label": {
+        "fr": "Quel est votre poids ?",
+        "ar": "ما هو وزنك؟"
+      },
+      "help": {
+        "fr": "Un poids minimum est exigé pour donner son sang.",
+        "ar": "يُشترط حدّ أدنى للوزن للتبرع بالدم."
+      }
+    },
+    {
+      "field": "lastDonationDate",
+      "type": "date",
+      "required": false,
+      "allowFuture": false,
+      "label": {
+        "fr": "Date de votre dernier don de sang (si vous avez déjà donné)",
+        "ar": "تاريخ آخر تبرع بالدم (إن سبق لك التبرع)"
+      },
+      "help": {
+        "fr": "Y compris un don fait hors de l'application. Laissez vide si vous n'avez jamais donné.",
+        "ar": "بما في ذلك أي تبرع تم خارج التطبيق. اترك الحقل فارغًا إذا لم تتبرع من قبل."
+      }
+    },
+    {
+      "field": "chronicDisease",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Souffrez-vous d'une maladie chronique ?",
+        "ar": "هل تعاني من مرض مزمن؟"
+      },
+      "help": {
+        "fr": "Par exemple : maladie cardiaque, épilepsie, diabète sous insuline, cancer, trouble de la coagulation.",
+        "ar": "مثل: أمراض القلب أو الصرع أو السكري المعتمد على الأنسولين أو السرطان أو اضطرابات التخثر."
+      }
+    },
+    {
+      "field": "onTreatment",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Suivez-vous actuellement un traitement médical ?",
+        "ar": "هل تتبع حاليًا علاجًا طبيًا؟"
+      }
+    },
+    {
+      "field": "hepatitisOrHivHistory",
+      "type": "boolean",
+      "required": true,
+      "sensitive": true,
+      "label": {
+        "fr": "Avez-vous déjà eu une hépatite B ou C, ou le VIH (sida) ?",
+        "ar": "هل سبق أن أُصبت بالتهاب الكبد الفيروسي «ب» أو «ج» أو بفيروس نقص المناعة البشرية (السيدا)؟"
+      }
+    },
+    {
+      "field": "recentSurgery",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Avez-vous subi une opération chirurgicale récemment ?",
+        "ar": "هل خضعت لعملية جراحية مؤخرًا؟"
+      }
+    },
+    {
+      "field": "recentTattooOrPiercing",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Avez-vous fait un tatouage ou un piercing récemment ?",
+        "ar": "هل قمت بوشم أو ثقب في الجسم مؤخرًا؟"
+      }
+    },
+    {
+      "field": "recentTransfusion",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Avez-vous reçu une transfusion sanguine récemment ?",
+        "ar": "هل تلقيت عملية نقل دم مؤخرًا؟"
+      }
+    },
+    {
+      "field": "riskAreaTravel",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Avez-vous séjourné récemment dans une zone à risque de paludisme ?",
+        "ar": "هل أقمت مؤخرًا في منطقة موبوءة بالملاريا؟"
+      }
+    },
+    {
+      "field": "recentVaccination",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Avez-vous reçu un vaccin récemment ?",
+        "ar": "هل تلقيت لقاحًا مؤخرًا؟"
+      }
+    },
+    {
+      "field": "recentFeverOrInfection",
+      "type": "boolean",
+      "required": true,
+      "label": {
+        "fr": "Avez-vous eu de la fièvre ou une infection ces dernières semaines ?",
+        "ar": "هل أُصبت بحمّى أو عدوى خلال الأسابيع الأخيرة؟"
+      }
+    },
+    {
+      "field": "pregnantOrBreastfeeding",
+      "type": "boolean",
+      "required": false,
+      "showIfProfile": {
+        "field": "sex",
+        "equals": "femme"
+      },
+      "label": {
+        "fr": "Êtes-vous enceinte ou allaitez-vous ?",
+        "ar": "هل أنتِ حامل أو مرضعة؟"
+      }
+    }
+  ]
+}
