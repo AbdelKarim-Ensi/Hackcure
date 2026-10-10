@@ -8,24 +8,24 @@ export interface NotifPrefs {
 
 export interface DonorProfile {
     id?: string;
-    fullName?: string;
-    phone?: string;
-    bloodGroup?: string;
-    bloodGroupConfirmed?: boolean; // 👈 Propriété ajoutée
-    sex?: 'homme' | 'femme' | string;
-    zone?: string;
-    maxRadiusKm?: number;
-    available?: boolean;
+    fullName: string;
+    phone: string;
+    bloodGroup: string;
+    sex: 'homme' | 'femme';
+    zone: string;
+    maxRadiusKm: number;
+    available: boolean;
+    bloodGroupConfirmed?: boolean;
     lastDonationDate?: string;
     nextDonationPossibleDate?: string;
-    reevalDate?: string;
-    notifPrefs?: NotifPrefs;
-    position?: {
-        latitude: number;
-        longitude: number;
+    // 🔒 Nouveaux champs d'état d'éligibilité par profil
+    eligibilityStatus?: 'en_attente' | 'eligible' | 'temporaire' | 'definitif';
+    reevalDate?: string | null;
+    notifPrefs?: {
+        alertsEnabled?: boolean;
+        quietHours?: { start: string; end: string };
     };
 }
-
 export interface EventSlot {
     time: string;
     capacity: number;

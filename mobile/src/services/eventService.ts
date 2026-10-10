@@ -34,8 +34,16 @@ export const getDonorProfile = async (token: string): Promise<DonorProfile> => {
     const localProfileStr = await AsyncStorage.getItem('user_profile');
     const localProfile = localProfileStr ? JSON.parse(localProfileStr) : null;
 
-    return {
+    // 🔒 Priorité absolue au statut d'éligibilité évalué localement
+    const localStatus = localProfile?.eligibilityStatus;
+    const localReeval = localProfile?.reevalDate;
+
+    const eligibilityStatus = localStatus || apiData.eligibilityStatus || apiData.status || apiData.result || 'en_attente';
+    const reevalDate = localReeval !== undefined ? localReeval : (apiData.reevalDate ?? null);
+
+    const updatedProfile: DonorProfile = {
         ...apiData,
+        ...localProfile,
         fullName: (apiData.fullName && apiData.fullName !== 'Amine Ben Salah')
             ? apiData.fullName
             : (localProfile?.fullName || 'Donneur'),
@@ -45,7 +53,17 @@ export const getDonorProfile = async (token: string): Promise<DonorProfile> => {
         zone: localProfile?.zone || apiData.zone || 'Tunis',
         maxRadiusKm: localProfile?.maxRadiusKm ?? apiData.maxRadiusKm ?? 20,
         available: localProfile?.available ?? apiData.available ?? true,
+        eligibilityStatus,
+        reevalDate,
     };
+
+    const userPhone = updatedProfile.phone;
+    if (userPhone) {
+        await AsyncStorage.setItem(`user_profile_${userPhone}`, JSON.stringify(updatedProfile));
+    }
+    await AsyncStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+
+    return updatedProfile;
 };
 
 export const updateDonorProfile = async (
@@ -140,9 +158,6 @@ export const getUpcomingEvents = async (
     }
 };
 
-/**
- * 🎯 Inscription à une collecte + enregistrement immédiat dans l'historique spécifique à l'utilisateur
- */
 export const registerToEvent = async (
     token: string,
     eventId: string,
@@ -159,7 +174,6 @@ export const registerToEvent = async (
         );
         registrationData = response.data;
     } catch (e: any) {
-        // Fallback si l'API est indisponible
         registrationData = {
             id: `reg-${Date.now()}`,
             eventId,
@@ -170,7 +184,6 @@ export const registerToEvent = async (
         };
     }
 
-    // 🔒 Clé d'historique propre à l'utilisateur connecté
     try {
         const profileStr = await AsyncStorage.getItem('user_profile');
         const profile = profileStr ? JSON.parse(profileStr) : null;
@@ -204,9 +217,6 @@ export const registerToEvent = async (
     return registrationData;
 };
 
-/**
- * 🎯 Récupère l'historique propre à l'utilisateur actuellement connecté
- */
 export const getUserRegistrations = async (_token?: string): Promise<RegistrationHistoryItem[]> => {
     try {
         const profileStr = await AsyncStorage.getItem('user_profile');
@@ -245,9 +255,6 @@ export interface ApiNotification {
     sentAt?: string;
 }
 
-/**
- * 🔔 Récupère la liste des notifications réelles de l'utilisateur connecté
- */
 export const getUserNotifications = async (token: string): Promise<ApiNotification[]> => {
     try {
         const response = await axios.get(`${API_BASE_URL}/notifications/me`, {
@@ -272,9 +279,6 @@ export interface UrgentRequestItem {
     createdAt?: string;
 }
 
-/**
- * 🚨 Récupère les demandes d'urgence actives créées par les hôpitaux (ex: Hôpital Charles Nicolle)
- */
 export const getActiveUrgentRequests = async (token: string): Promise<UrgentRequestItem[]> => {
     try {
         const response = await axios.get(`${API_BASE_URL}/requests`, {
@@ -288,9 +292,6 @@ export const getActiveUrgentRequests = async (token: string): Promise<UrgentRequ
     }
 };
 
-/**
- * 🚑 Répondre à une alerte d'urgence d'hôpital ("Je viens")
- */
 export const respondToUrgentRequest = async (
     token: string,
     requestId: string,
