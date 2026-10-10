@@ -6,6 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 API="${API:-http://localhost:3000}"
 PASS="${SEED_PASSWORD:-Damm2026!}"
+SEED_PREFIX="${SEED_PREFIX:-+2160000}"      # comptes donneurs du seed : les autres ont un autre mot de passe
 TIMEOUT="${WAVE_TIMEOUT:-45}"           # attente max de la vague 2 (WAVE_DELAY_SECONDS + marge)
 HOSP="+21600010001"                     # Hôpital Charles Nicolle (seed)
 
@@ -19,7 +20,8 @@ token() {
 sql() { (cd .. && docker compose exec -T db sh -c 'psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postgres}" -At -c "$0"' "$1"); }
 alerted() { # id : téléphones des donneurs alertés, dans l'ordre d'alerte
   sql "SELECT u.phone FROM notifications n JOIN users u ON u.id=n.user_id
-       WHERE n.request_id='$1' AND n.type='urgence' ORDER BY n.created_at, u.phone"
+       WHERE n.request_id='$1' AND n.type='urgence' AND u.phone LIKE '${SEED_PREFIX}%'
+       ORDER BY n.created_at, u.phone"
 }
 respond() { # id téléphone
   local t code; t=$(token "$2")
