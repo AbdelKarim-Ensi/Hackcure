@@ -1,7 +1,8 @@
-// AJOUT : T3 - squelette du contrôleur donations (DTO inclus, service réel en T4.3)
+// T4.3 : POST /donations/confirm réel (DonationsService). DTO du contrat v1 conservés ici.
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiProperty,
@@ -9,10 +10,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
 import { DonationSource, DonationType, UserRole } from '../common/enums';
 import { MOCK_IDS } from '../contract/mocks';
+import { DonationsService } from './donations.service';
 
 export class ConfirmDonationDto {
   @ApiProperty({ example: MOCK_IDS.donorUser, description: 'userId du donneur' })
@@ -67,26 +71,20 @@ export class DonationDto {
 @ApiTags('donations')
 @Controller('donations')
 export class DonationsController {
+  constructor(private readonly donations: DonationsService) {}
+
   @Post('confirm')
   @HttpCode(200)
   @ApiRoles(UserRole.HOPITAL, UserRole.CRT)
   @ApiOperation({
     summary: 'Confirmer un don',
     description:
-      'Enregistre le don, met à jour la date du dernier don et recalcule la date du prochain don possible (F2.1, F2.2).',
+      'Enregistre le don, met à jour la date du dernier don et recalcule la date du prochain don possible (F2.1, F2.2). Date par défaut : aujourd\'hui, jamais dans le futur.',
   })
   @ApiOkResponse({ type: DonationDto })
-  @ApiBadRequestResponse({ type: ErrorResponseDto })
-  confirm(@Body() dto: ConfirmDonationDto): DonationDto {
-    return {
-      id: MOCK_IDS.donation,
-      donorId: dto.donorId,
-      type: dto.type,
-      donatedAt: dto.donatedAt ?? '2026-10-03',
-      place: dto.place,
-      source: dto.source,
-      confirmedBy: MOCK_IDS.hospitalUser,
-      nextDonationPossibleDate: '2027-01-03',
-    };
+  @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'Date du don invalide ou dans le futur' })
+  @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'Donneur introuvable' })
+  confirm(@Body() dto: ConfirmDonationDto, @CurrentUser() user: AuthenticatedUser): Promise<DonationDto> {
+    return this.donations.confirm(dto, user);
   }
 }

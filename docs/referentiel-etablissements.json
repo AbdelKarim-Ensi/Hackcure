@@ -1,0 +1,1005 @@
+[
+  {
+    "code": "CNTS-TUNIS",
+    "nom": "Centre National de Transfusion Sanguine (CNTS)",
+    "type": "centre_transfusion",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": false,
+    "adresse": "Rue Djebel Lakhdar, 1006 Tunis",
+    "telephones": [
+      "71573884",
+      "71574106",
+      "98724944"
+    ],
+    "fax": [
+      "71562957"
+    ],
+    "territoire": "National",
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "CNTS",
+    "hopitalCode": null
+  },
+  {
+    "code": "CRTS-SFAX",
+    "nom": "CRTS de Sfax",
+    "type": "centre_transfusion",
+    "gouvernorat": "Sfax",
+    "gouvernoratDeduit": false,
+    "adresse": "Angle Majida Boulila, Rte El Aïn, 3003 Sfax",
+    "telephones": [
+      "74245462"
+    ],
+    "fax": [
+      "74245433"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "CRTS",
+    "hopitalCode": null
+  },
+  {
+    "code": "CRTS-SOUSSE",
+    "nom": "CRTS de Sousse (CHU Farhat Hached)",
+    "type": "centre_transfusion",
+    "gouvernorat": "Sousse",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Farhat Hached, 4000 Sousse",
+    "telephones": [
+      "73214200"
+    ],
+    "fax": [
+      "73224411"
+    ],
+    "territoire": [
+      "Sousse",
+      "Monastir",
+      "Kairouan"
+    ],
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "CRTS",
+    "hopitalCode": "H-SOUSSE"
+  },
+  {
+    "code": "CRTS-JENDOUBA",
+    "nom": "CRTS de Jendouba",
+    "type": "centre_transfusion",
+    "gouvernorat": "Jendouba",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Jendouba, 8100 Jendouba",
+    "telephones": [
+      "78604558"
+    ],
+    "fax": [
+      "78604569"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "CRTS",
+    "hopitalCode": "H-JENDOUBA"
+  },
+  {
+    "code": "CRTS-GABES",
+    "nom": "CRTS de Gabès",
+    "type": "centre_transfusion",
+    "gouvernorat": "Gabès",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Gabès, 6001 Gabès",
+    "telephones": [
+      "75292855"
+    ],
+    "fax": [
+      "75290300"
+    ],
+    "territoire": [
+      "Gabès",
+      "Médenine",
+      "Tataouine"
+    ],
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "CRTS",
+    "hopitalCode": "H-GABES"
+  },
+  {
+    "code": "CRTS-GAFSA",
+    "nom": "CRTS de Gafsa",
+    "type": "centre_transfusion",
+    "gouvernorat": "Gafsa",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Gafsa, 2100 Gafsa",
+    "telephones": [
+      "76225055"
+    ],
+    "fax": [
+      "76229750"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "CRTS",
+    "hopitalCode": "H-GAFSA"
+  },
+  {
+    "code": "CMTS-BARDO",
+    "nom": "Centre Militaire de Transfusion Sanguine",
+    "type": "centre_transfusion",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": true,
+    "adresse": "1 rue des Etats Unis, Ras Tabia, 2000 Le Bardo",
+    "telephones": [
+      "71564466"
+    ],
+    "fax": [
+      "71562465"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "CENTRE_MILITAIRE",
+    "hopitalCode": null
+  },
+  {
+    "code": "BS-CHARLES-NICOLLE",
+    "nom": "CHU Charles Nicolle (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Charles Nicolle, 1006 Tunis",
+    "telephones": [
+      "71578357"
+    ],
+    "fax": [
+      "71562777"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-CHARLES-NICOLLE"
+  },
+  {
+    "code": "BS-LA-RABTA",
+    "nom": "CHU La Rabta (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU La Rabta, 1006 Tunis",
+    "telephones": [
+      "71578819"
+    ],
+    "fax": [
+      "71570506"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-LA-RABTA"
+  },
+  {
+    "code": "BS-HABIB-THAMEUR",
+    "nom": "CHU Habib Thameur (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Habib Thameur, 1069 Tunis",
+    "telephones": [
+      "71135000"
+    ],
+    "fax": [
+      "71397171"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-HABIB-THAMEUR"
+  },
+  {
+    "code": "BS-MED-KASSAB",
+    "nom": "Institut Med Kassab d'Orthopédie (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "La Manouba",
+    "gouvernoratDeduit": true,
+    "adresse": "Institut Med Kassab d'Orthopédie, 2010 Ksar Saïd",
+    "telephones": [
+      "71606934",
+      "71606914"
+    ],
+    "fax": [
+      "71606920"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-MED-KASSAB"
+  },
+  {
+    "code": "BS-ZAGHOUAN",
+    "nom": "Hôpital régional de Zaghouan (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Zaghouan",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Zaghouan",
+    "telephones": [
+      "72673515",
+      "72673516"
+    ],
+    "fax": [
+      "72675772"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-ZAGHOUAN"
+  },
+  {
+    "code": "BS-FATTOUMA-BOURGUIBA",
+    "nom": "CHU Fattouma Bourguiba, Monastir (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Monastir",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Fattouma Bourguiba, 5000 Monastir",
+    "telephones": [
+      "73460411",
+      "73447108"
+    ],
+    "fax": [
+      "73460678"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-FATTOUMA-BOURGUIBA"
+  },
+  {
+    "code": "BS-SAHLOUL",
+    "nom": "CHU Sahloul, Sousse (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Sousse",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Sahloul, 4000 Sousse",
+    "telephones": [
+      "73369411"
+    ],
+    "fax": [
+      "73367451"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-SAHLOUL"
+  },
+  {
+    "code": "BS-TAHAR-SFAR",
+    "nom": "CHU Tahar Sfar, Mahdia (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Mahdia",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Tahar Sfar, 5100 Mahdia",
+    "telephones": [
+      "73671744"
+    ],
+    "fax": [
+      "73671579"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-TAHAR-SFAR"
+  },
+  {
+    "code": "BS-BEJA",
+    "nom": "Hôpital régional de Béja (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Béja",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Béja, 9000 Béja",
+    "telephones": [
+      "78457322",
+      "78455431"
+    ],
+    "fax": [
+      "78454529"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-BEJA"
+  },
+  {
+    "code": "BS-BIZERTE",
+    "nom": "Hôpital régional de Bizerte (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Bizerte",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Bizerte, 7000 Bizerte",
+    "telephones": [
+      "72431422",
+      "72431224"
+    ],
+    "fax": [
+      "72443500"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-BIZERTE"
+  },
+  {
+    "code": "BS-GROMBALIA",
+    "nom": "Hôpital de circonscription de Grombalia (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Nabeul",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital de circonscription de Grombalia, 8030 Grombalia",
+    "telephones": [
+      "72255212"
+    ],
+    "fax": [
+      "72257825"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-GROMBALIA"
+  },
+  {
+    "code": "BS-JERBA",
+    "nom": "Hôpital régional de Jerba (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Médenine",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Jerba, 4180 Houmt Souk - Jerba",
+    "telephones": [
+      "75650018"
+    ],
+    "fax": [
+      "75650202"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-JERBA"
+  },
+  {
+    "code": "BS-KASSERINE",
+    "nom": "Hôpital régional de Kasserine (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Kasserine",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Kasserine, 1200 Kasserine",
+    "telephones": [
+      "77474910",
+      "77474022"
+    ],
+    "fax": [
+      "77473777"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-KASSERINE"
+  },
+  {
+    "code": "BS-KEBILI",
+    "nom": "Hôpital régional de Kébili (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Kébili",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Kébili, 4200 Kébili",
+    "telephones": [
+      "75490027",
+      "75490461"
+    ],
+    "fax": [
+      "75494588"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-KEBILI"
+  },
+  {
+    "code": "BS-LE-KEF",
+    "nom": "Hôpital régional du Kef (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Le Kef",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional du Kef, 7100 Le Kef",
+    "telephones": [
+      "78228900",
+      "78228923"
+    ],
+    "fax": [
+      "78228707"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-LE-KEF"
+  },
+  {
+    "code": "BS-MEDENINE",
+    "nom": "Hôpital régional de Médenine (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Médenine",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Médenine, 4100 Médenine",
+    "telephones": [
+      "75640044",
+      "75640421"
+    ],
+    "fax": [
+      "75643735"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-MEDENINE"
+  },
+  {
+    "code": "BS-MENZEL-BOURGUIBA",
+    "nom": "Hôpital régional de Menzel Bourguiba (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Bizerte",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Menzel Bourguiba, 7050 Menzel Bourguiba",
+    "telephones": [
+      "72460455",
+      "72460690"
+    ],
+    "fax": [
+      "72464411"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-MENZEL-BOURGUIBA"
+  },
+  {
+    "code": "BS-MENZEL-TEMIME",
+    "nom": "Hôpital régional de Menzel Temime (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Nabeul",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Menzel Temime, 8080 Menzel Temime",
+    "telephones": [
+      "72344155"
+    ],
+    "fax": [
+      "72344222"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-MENZEL-TEMIME"
+  },
+  {
+    "code": "BS-METLAOUI",
+    "nom": "Hôpital régional de Metlaoui (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Gafsa",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Metlaoui, 2130 Metlaoui",
+    "telephones": [
+      "76241600"
+    ],
+    "fax": [
+      "76240400"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-METLAOUI"
+  },
+  {
+    "code": "BS-NABEUL",
+    "nom": "Hôpital régional de Nabeul (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Nabeul",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Nabeul, 8000 Nabeul",
+    "telephones": [
+      "72285633"
+    ],
+    "fax": [
+      "72224848"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-NABEUL"
+  },
+  {
+    "code": "BS-SIDI-BOUZID",
+    "nom": "Hôpital régional de Sidi Bouzid (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Sidi Bouzid",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Sidi Bouzid, 9100 Sidi Bouzid",
+    "telephones": [
+      "76632500"
+    ],
+    "fax": [
+      "76634368"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-SIDI-BOUZID"
+  },
+  {
+    "code": "BS-SILIANA",
+    "nom": "Hôpital régional de Siliana (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Siliana",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Siliana, Siliana",
+    "telephones": [
+      "78872800"
+    ],
+    "fax": [
+      "78870019"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-SILIANA"
+  },
+  {
+    "code": "BS-TATAOUINE",
+    "nom": "Hôpital régional de Tataouine (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Tataouine",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Tataouine, 3200 Tataouine",
+    "telephones": [
+      "75870114"
+    ],
+    "fax": [
+      "75870624"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-TATAOUINE"
+  },
+  {
+    "code": "BS-TOZEUR",
+    "nom": "Hôpital régional de Tozeur (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Tozeur",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Tozeur, 2200 Tozeur",
+    "telephones": [
+      "76453400"
+    ],
+    "fax": [
+      "76453047"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-TOZEUR"
+  },
+  {
+    "code": "BS-ZARZIS",
+    "nom": "Hôpital régional de Zarzis (banque de sang)",
+    "type": "banque_sang",
+    "gouvernorat": "Médenine",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Zarzis, 4170 Zarzis",
+    "telephones": [
+      "75738026",
+      "75738027"
+    ],
+    "fax": [
+      "75738368"
+    ],
+    "territoire": null,
+    "source": "CNTS - Liste des centres de transfusion sanguine et des banques du sang (PDF)",
+    "categorie": "BANQUE_SANG",
+    "hopitalCode": "H-ZARZIS"
+  },
+  {
+    "code": "H-SOUSSE",
+    "nom": "CHU Farhat Hached",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Sousse",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Farhat Hached, 4000 Sousse",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "CRTS-SOUSSE",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-JENDOUBA",
+    "nom": "Hôpital régional de Jendouba",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Jendouba",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Jendouba, 8100 Jendouba",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "CRTS-JENDOUBA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-GABES",
+    "nom": "Hôpital régional de Gabès",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Gabès",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Gabès, 6001 Gabès",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "CRTS-GABES",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-GAFSA",
+    "nom": "Hôpital régional de Gafsa",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Gafsa",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Gafsa, 2100 Gafsa",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "CRTS-GAFSA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-CHARLES-NICOLLE",
+    "nom": "CHU Charles Nicolle",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Charles Nicolle, 1006 Tunis",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-CHARLES-NICOLLE",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-LA-RABTA",
+    "nom": "CHU La Rabta",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU La Rabta, 1006 Tunis",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-LA-RABTA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-HABIB-THAMEUR",
+    "nom": "CHU Habib Thameur",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Tunis",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Habib Thameur, 1069 Tunis",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-HABIB-THAMEUR",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-MED-KASSAB",
+    "nom": "Institut Med Kassab d'Orthopédie",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "La Manouba",
+    "gouvernoratDeduit": true,
+    "adresse": "Institut Med Kassab d'Orthopédie, 2010 Ksar Saïd",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-MED-KASSAB",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-ZAGHOUAN",
+    "nom": "Hôpital régional de Zaghouan",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Zaghouan",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital Régional de Zaghouan",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-ZAGHOUAN",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-FATTOUMA-BOURGUIBA",
+    "nom": "CHU Fattouma Bourguiba, Monastir",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Monastir",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Fattouma Bourguiba, 5000 Monastir",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-FATTOUMA-BOURGUIBA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-SAHLOUL",
+    "nom": "CHU Sahloul, Sousse",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Sousse",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Sahloul, 4000 Sousse",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-SAHLOUL",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-TAHAR-SFAR",
+    "nom": "CHU Tahar Sfar, Mahdia",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Mahdia",
+    "gouvernoratDeduit": false,
+    "adresse": "CHU Tahar Sfar, 5100 Mahdia",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-TAHAR-SFAR",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-BEJA",
+    "nom": "Hôpital régional de Béja",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Béja",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Béja, 9000 Béja",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-BEJA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-BIZERTE",
+    "nom": "Hôpital régional de Bizerte",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Bizerte",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Bizerte, 7000 Bizerte",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-BIZERTE",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-GROMBALIA",
+    "nom": "Hôpital de circonscription de Grombalia",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Nabeul",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital de circonscription de Grombalia, 8030 Grombalia",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-GROMBALIA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-JERBA",
+    "nom": "Hôpital régional de Jerba",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Médenine",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Jerba, 4180 Houmt Souk - Jerba",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-JERBA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-KASSERINE",
+    "nom": "Hôpital régional de Kasserine",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Kasserine",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Kasserine, 1200 Kasserine",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-KASSERINE",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-KEBILI",
+    "nom": "Hôpital régional de Kébili",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Kébili",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Kébili, 4200 Kébili",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-KEBILI",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-LE-KEF",
+    "nom": "Hôpital régional du Kef",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Le Kef",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional du Kef, 7100 Le Kef",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-LE-KEF",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-MEDENINE",
+    "nom": "Hôpital régional de Médenine",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Médenine",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Médenine, 4100 Médenine",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-MEDENINE",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-MENZEL-BOURGUIBA",
+    "nom": "Hôpital régional de Menzel Bourguiba",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Bizerte",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Menzel Bourguiba, 7050 Menzel Bourguiba",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-MENZEL-BOURGUIBA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-MENZEL-TEMIME",
+    "nom": "Hôpital régional de Menzel Temime",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Nabeul",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Menzel Temime, 8080 Menzel Temime",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-MENZEL-TEMIME",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-METLAOUI",
+    "nom": "Hôpital régional de Metlaoui",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Gafsa",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Metlaoui, 2130 Metlaoui",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-METLAOUI",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-NABEUL",
+    "nom": "Hôpital régional de Nabeul",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Nabeul",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Nabeul, 8000 Nabeul",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-NABEUL",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-SIDI-BOUZID",
+    "nom": "Hôpital régional de Sidi Bouzid",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Sidi Bouzid",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Sidi Bouzid, 9100 Sidi Bouzid",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-SIDI-BOUZID",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-SILIANA",
+    "nom": "Hôpital régional de Siliana",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Siliana",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Siliana, Siliana",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-SILIANA",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-TATAOUINE",
+    "nom": "Hôpital régional de Tataouine",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Tataouine",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Tataouine, 3200 Tataouine",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-TATAOUINE",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-TOZEUR",
+    "nom": "Hôpital régional de Tozeur",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Tozeur",
+    "gouvernoratDeduit": false,
+    "adresse": "Hôpital régional de Tozeur, 2200 Tozeur",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-TOZEUR",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  },
+  {
+    "code": "H-ZARZIS",
+    "nom": "Hôpital régional de Zarzis",
+    "type": "hopital",
+    "categorie": "HOPITAL",
+    "gouvernorat": "Médenine",
+    "gouvernoratDeduit": true,
+    "adresse": "Hôpital régional de Zarzis, 4170 Zarzis",
+    "telephones": [],
+    "fax": [],
+    "territoire": null,
+    "structureCode": "BS-ZARZIS",
+    "source": "Déduit de l'adresse de la structure transfusionnelle (PDF CNTS) ; à remplacer par l'annuaire du ministère de la Santé"
+  }
+]
