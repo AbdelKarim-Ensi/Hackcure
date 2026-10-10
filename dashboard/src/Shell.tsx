@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { USE_MOCK } from './api'
 import { useAuth } from './authContext'
 import { PROFILES, useProfile, type ProfileKey } from './profiles'
+import LaunchWaveButton from './LaunchWaveButton'
 
 export default function Shell() {
   const { profile, setProfile, orgName } = useProfile()
@@ -58,6 +59,12 @@ export default function Shell() {
             </NavLink>
           ))}
         </nav>
+
+        {String(profile).startsWith('hop') && (
+          <div className="mt-4">
+            <LaunchWaveButton variant="sidebar" />
+          </div>
+        )}
 
         {USE_MOCK && (
           <label className="mt-4 block cursor-pointer text-xs text-muted">
