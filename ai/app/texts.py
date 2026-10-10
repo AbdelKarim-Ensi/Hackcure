@@ -7,8 +7,9 @@ DISCLAIMERS = {
     "darija": "هذي معلومات عامة برك، وما تعوّضش رأي الفريق الطبي. القرار الأخير يتّخذو الفريق الطبي نهار التبرع.",
 }
 
-STUB_ANSWERS = {
-    "fr": "Je suis en cours de configuration. Bientôt, je pourrai répondre à vos questions sur le don de sang.",
-    "ar": "أنا قيد الإعداد. قريبًا سأتمكن من الإجابة عن أسئلتكم حول التبرع بالدم.",
-    "darija": "أنا مازلت نتركّب. قريب نجاوبك على أسئلتك على التبرع بالدم.",
+FALLBACK_ANSWERS = {
+    "fr": "Je ne trouve pas cette information dans ma base. Pour une question sur votre cas particulier, "
+    "adressez-vous au personnel médical du centre de transfusion.",
+    "ar": "لا أجد هذه المعلومة في قاعدة معلوماتي. وبالنسبة لحالتك الخاصة، يرجى التوجه إلى الطاقم الطبي بمركز نقل الدم.",
+    "darija": "ما لقيتش المعلومة هاذي عندي. على حالتك الخاصة، اسأل الفريق الطبي في مركز نقل الدم.",
 }
