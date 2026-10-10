@@ -1,4 +1,3 @@
-import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import CurrentRequest from './CurrentRequest'
 import StockIcon from './StockIcon'
@@ -142,28 +141,3 @@ export function Stocks() {
   )
 }
 
-export function Events() {
-  const [list, setList] = useState(events0)
-  const add = (ev: FormEvent<HTMLFormElement>) => {
-    ev.preventDefault()
-    const f = new FormData(ev.currentTarget)
-    setList([...list, { id: crypto.randomUUID(), title: String(f.get('title')), place: String(f.get('place')),
-      date: String(f.get('date')), filled: 0, capacity: Number(f.get('capacity')) }])
-    ev.currentTarget.reset()
-  }
-  const input = 'mt-1 w-full rounded-lg border border-line bg-plasma px-3 py-2'
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-      <form onSubmit={add} className="space-y-3 rounded-2xl border border-line bg-serum p-6">
-        <h1 className="font-display text-xl font-semibold">Annoncer une collecte</h1>
-        <label className="block text-sm">Titre<input name="title" required className={input} /></label>
-        <label className="block text-sm">Lieu<input name="place" required className={input} /></label>
-        <label className="block text-sm">Date<input name="date" type="date" required className={input} /></label>
-        <label className="block text-sm">Capacité<input name="capacity" type="number" min={1} defaultValue={60} required className={input} /></label>
-        <button type="submit" className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white hover:bg-primary-dark">Publier la collecte</button>
-      </form>
-      <section><h2 className="mb-3 font-display text-xl font-semibold">Collectes annoncées</h2>
-        <ul className="space-y-3">{list.map((e) => <EventRow key={e.id} e={e} />)}</ul></section>
-    </div>
-  )
-}

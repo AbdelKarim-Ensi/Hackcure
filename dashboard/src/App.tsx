@@ -9,7 +9,8 @@ import { ProfileCtx, profileFor, type ProfileKey } from './profiles'
 import Shell from './Shell'
 import NewRequest from './NewRequest'
 import StockEdit from './StockEdit'
-import { Events, Home, Stocks } from './pages'
+import { Home, Stocks } from './pages'
+import { Events } from './EventsPage'
 import { Requests } from './RequestsPage'
 
 // Filet de sécurité : affiche l'erreur à l'écran au lieu d'une page blanche.
