@@ -2,14 +2,19 @@
 from fastapi import FastAPI
 
 from . import __version__
-from .schemas import ChatRequest, ChatResponse, HealthResponse
-from .texts import DISCLAIMERS, STUB_ANSWERS
+from .kb import load_kb
+from .language import resolve_language
+from .schemas import ChatRequest, ChatResponse, HealthResponse, Source
+from .search import KbSearch, is_confident
+from .texts import DISCLAIMERS, FALLBACK_ANSWERS
 
 app = FastAPI(
     title="Damm : service IA",
     version=__version__,
     description="Assistant donneur. Informations générales uniquement : aucune décision médicale.",
 )
+
+_search = KbSearch(load_kb())
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -20,12 +25,25 @@ def health() -> HealthResponse:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    """Étape 1 : réponse fixe. La recherche dans la base de connaissances arrive à l'étape 3."""
-    language = "fr" if req.language == "auto" else req.language
+    """Cherche la question dans la base de connaissances. Si rien ne correspond assez, il le dit."""
+    language = resolve_language(req.language, req.message)
+    matches = _search.search(req.message)
+
+    if is_confident(matches):
+        entry = matches[0].entry
+        return ChatResponse(
+            answer=getattr(entry.answer, language),
+            language=language,
+            intent="escalate" if entry.needs_staff else "faq",
+            sources=[Source(id=entry.id, title=entry.topic)],
+            needs_staff=entry.needs_staff,
+            disclaimer=DISCLAIMERS[language],
+        )
+
     return ChatResponse(
-        answer=STUB_ANSWERS[language],
+        answer=FALLBACK_ANSWERS[language],
         language=language,
-        intent="stub",
+        intent="out_of_scope",
         sources=[],
         needs_staff=False,
         disclaimer=DISCLAIMERS[language],

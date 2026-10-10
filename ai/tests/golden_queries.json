@@ -1,0 +1,281 @@
+{
+  "note": "Questions réalistes, formulées autrement que dans la base. Ajoutez celles de vrais donneurs. expected = id de l'entrée attendue, ou null si le bot doit dire qu'il ne sait pas.",
+  "queries": [
+    {
+      "q": "Qui a le droit de donner son sang ?",
+      "expected": "eligibilite-generale"
+    },
+    {
+      "q": "quelles sont les conditions pour donner du sang",
+      "expected": "eligibilite-generale"
+    },
+    {
+      "q": "شروط التبرع بالدم",
+      "expected": "eligibilite-generale"
+    },
+    {
+      "q": "شكون يقدر يتبرع",
+      "expected": "eligibilite-generale"
+    },
+    {
+      "q": "comment ça se passe quand on donne son sang",
+      "expected": "deroulement-du-don"
+    },
+    {
+      "q": "كيف تتم عملية سحب الدم",
+      "expected": "deroulement-du-don"
+    },
+    {
+      "q": "كيفاش يتعدى السحب",
+      "expected": "deroulement-du-don"
+    },
+    {
+      "q": "combien de temps entre deux dons",
+      "expected": "delai-entre-dons"
+    },
+    {
+      "q": "quand puis-je faire mon prochain don",
+      "expected": "delai-entre-dons"
+    },
+    {
+      "q": "كل قداش نجم نعاود نتبرع",
+      "expected": "delai-entre-dons"
+    },
+    {
+      "q": "j'ai un tatouage récent",
+      "expected": "tatouage-piercing"
+    },
+    {
+      "q": "piercing et don de sang",
+      "expected": "tatouage-piercing"
+    },
+    {
+      "q": "عملت وشم هل يمكنني التبرع",
+      "expected": "tatouage-piercing"
+    },
+    {
+      "q": "درت تاتو نجم نتبرع",
+      "expected": "tatouage-piercing"
+    },
+    {
+      "q": "j'ai subi une chirurgie le mois dernier",
+      "expected": "operation-chirurgicale"
+    },
+    {
+      "q": "عملية جراحية والتبرع",
+      "expected": "operation-chirurgicale"
+    },
+    {
+      "q": "درت عملية في الركبة",
+      "expected": "operation-chirurgicale"
+    },
+    {
+      "q": "j'ai fait un vaccin hier",
+      "expected": "vaccination"
+    },
+    {
+      "q": "التبرع بعد اللقاح",
+      "expected": "vaccination"
+    },
+    {
+      "q": "عملت لقاح نجم نتبرع",
+      "expected": "vaccination"
+    },
+    {
+      "q": "j'ai de la fièvre, je peux donner ?",
+      "expected": "fievre-antibiotiques"
+    },
+    {
+      "q": "je prends des antibiotiques",
+      "expected": "fievre-antibiotiques"
+    },
+    {
+      "q": "عندي سخانة",
+      "expected": "fievre-antibiotiques"
+    },
+    {
+      "q": "je reviens d'un voyage à l'étranger",
+      "expected": "voyage-paludisme"
+    },
+    {
+      "q": "paludisme et don du sang",
+      "expected": "voyage-paludisme"
+    },
+    {
+      "q": "رجعت من سفر",
+      "expected": "voyage-paludisme"
+    },
+    {
+      "q": "je suis enceinte",
+      "expected": "grossesse-allaitement"
+    },
+    {
+      "q": "j'allaite mon bébé, puis-je donner",
+      "expected": "grossesse-allaitement"
+    },
+    {
+      "q": "أنا حامل",
+      "expected": "grossesse-allaitement"
+    },
+    {
+      "q": "j'ai du diabète",
+      "expected": "maladie-chronique-traitement"
+    },
+    {
+      "q": "je prends des médicaments tous les jours",
+      "expected": "maladie-chronique-traitement"
+    },
+    {
+      "q": "عندي مرض مزمن",
+      "expected": "maladie-chronique-traitement"
+    },
+    {
+      "q": "j'ai eu une hépatite",
+      "expected": "hepatite-vih"
+    },
+    {
+      "q": "السيدا والتبرع",
+      "expected": "hepatite-vih"
+    },
+    {
+      "q": "je ne sais pas quel est mon groupe sanguin",
+      "expected": "groupe-sanguin-inconnu"
+    },
+    {
+      "q": "ما نعرفش فصيلة الدم متاعي",
+      "expected": "groupe-sanguin-inconnu"
+    },
+    {
+      "q": "que dois-je manger avant de donner",
+      "expected": "avant-apres-le-don"
+    },
+    {
+      "q": "شنوة نعمل بعد التبرع",
+      "expected": "avant-apres-le-don"
+    },
+    {
+      "q": "est-ce dangereux de donner son sang",
+      "expected": "securite-du-don"
+    },
+    {
+      "q": "هل التبرع بالدم مؤلم",
+      "expected": "securite-du-don"
+    },
+    {
+      "q": "mes données médicales sont-elles protégées",
+      "expected": "confidentialite"
+    },
+    {
+      "q": "شكون يشوف أجوبتي",
+      "expected": "confidentialite"
+    },
+    {
+      "q": "pourquoi je reçois des notifications",
+      "expected": "alertes-urgence"
+    },
+    {
+      "q": "comment désactiver les alertes",
+      "expected": "alertes-urgence"
+    },
+    {
+      "q": "علاش توصلني إشعارات",
+      "expected": "alertes-urgence"
+    },
+    {
+      "q": "où trouver les collectes du croissant rouge",
+      "expected": "collectes-croissant-rouge"
+    },
+    {
+      "q": "حملة تبرع الهلال الأحمر",
+      "expected": "collectes-croissant-rouge"
+    },
+    {
+      "q": "quel temps fait-il demain",
+      "expected": null
+    },
+    {
+      "q": "recette du couscous",
+      "expected": null
+    },
+    {
+      "q": "qui a gagné le match hier",
+      "expected": null
+    },
+    {
+      "q": "كيفاش نتعلم البرمجة",
+      "expected": null
+    },
+    {
+      "q": "شحال سعر البنزين",
+      "expected": null
+    },
+    {
+      "q": "bonjour",
+      "expected": null
+    },
+    {
+      "q": "combien coûte un taxi",
+      "expected": null
+    },
+    {
+      "q": "où est la gare",
+      "expected": null
+    },
+    {
+      "q": "comment soigner un rhume",
+      "expected": null
+    },
+    {
+      "q": "j'ai mal à la tête, que faire",
+      "expected": null
+    },
+    {
+      "q": "quel est le meilleur téléphone",
+      "expected": null
+    },
+    {
+      "q": "comment apprendre l'anglais",
+      "expected": null
+    },
+    {
+      "q": "donne-moi une blague",
+      "expected": null
+    },
+    {
+      "q": "qui est le président",
+      "expected": null
+    },
+    {
+      "q": "وين نلقى مطعم باهي",
+      "expected": null
+    },
+    {
+      "q": "شنوة أخبار الطقس اليوم",
+      "expected": null
+    },
+    {
+      "q": "كيفاش نعمل كيك",
+      "expected": null
+    },
+    {
+      "q": "ما هي عاصمة فرنسا",
+      "expected": null
+    },
+    {
+      "q": "كيف أصلح سيارتي",
+      "expected": null
+    },
+    {
+      "q": "شحال ثمن تذكرة الطيارة",
+      "expected": null
+    },
+    {
+      "q": "أريد قرضا من البنك",
+      "expected": null
+    },
+    {
+      "q": "وقتاش يبدا الماتش",
+      "expected": null
+    }
+  ]
+}
