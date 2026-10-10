@@ -40,6 +40,29 @@ const MONTH_NAMES = [
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
+// 🔒 CONVERTISSEUR DE DATE UNIFIÉ À MINUIT LOCAL (00:00:00.000)
+const toLocalMidnight = (dateOrStr?: string | Date | null): Date | null => {
+    if (!dateOrStr) return null;
+    if (dateOrStr instanceof Date) {
+        const d = new Date(dateOrStr);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+    const str = String(dateOrStr).trim();
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        return new Date(year, month, day, 0, 0, 0, 0);
+    }
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+        return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+    }
+    return null;
+};
+
 // 💓 COMPOSANT ECG ANIMÉ
 const ECG_PERIOD = 200;
 const ECG_HEIGHT = 44;
@@ -128,10 +151,11 @@ export const ProfileScreen = ({ navigation }: Props) => {
     const [token, setToken] = useState<string | null>(null);
     const [profile, setProfile] = useState<DonorProfile | null>(null);
 
-    // ✏️ ÉTATS MODIFIABLES DU PROFIL
+    // ✏️ ÉTATS DU PROFIL
     const [fullName, setFullName] = useState<string>('');
     const [sex, setSex] = useState<'homme' | 'femme'>('homme');
     const [bloodGroup, setBloodGroup] = useState<string>('O+');
+    const [lastDonationDate, setLastDonationDate] = useState<string>('');
     const [available, setAvailable] = useState<boolean>(true);
     const [zone, setZone] = useState<string>('Tunis');
     const [maxRadiusKm, setMaxRadiusKm] = useState<string>('20');
@@ -152,11 +176,50 @@ export const ProfileScreen = ({ navigation }: Props) => {
             setToken(storedToken);
 
             const data = await getDonorProfile(storedToken);
-            setProfile(data);
 
+            const currentSex = (data.sex as 'homme' | 'femme') || 'homme';
+            const donationStr = data.lastDonationDate || '';
+            const lastDonationMidnight = toLocalMidnight(donationStr);
+
+            const todayNow = new Date();
+            todayNow.setHours(0, 0, 0, 0);
+
+            let currentReevalStr = data.reevalDate || null;
+            let currentStatus = data.eligibilityStatus || 'en_attente';
+
+            // 🔒 CALCUL DU REPOS DE DON : HOMME = 2 MOIS / FEMME = 3 MOIS
+            if (lastDonationMidnight) {
+                const restMonths = currentSex === 'femme' ? 3 : 2;
+                const donationRestDate = new Date(lastDonationMidnight);
+                donationRestDate.setMonth(donationRestDate.getMonth() + restMonths);
+
+                const y = donationRestDate.getFullYear();
+                const m = String(donationRestDate.getMonth() + 1).padStart(2, '0');
+                const d = String(donationRestDate.getDate()).padStart(2, '0');
+                currentReevalStr = `${y}-${m}-${d}`;
+
+                if (donationRestDate <= todayNow) {
+                    if (currentStatus === 'temporaire') {
+                        currentStatus = 'eligible';
+                    }
+                } else {
+                    if (currentStatus === 'eligible') {
+                        currentStatus = 'temporaire';
+                    }
+                }
+            }
+
+            const refreshedProfile = {
+                ...data,
+                eligibilityStatus: currentStatus,
+                reevalDate: currentReevalStr,
+            };
+
+            setProfile(refreshedProfile);
             setFullName(data.fullName || '');
-            setSex((data.sex as 'homme' | 'femme') || 'homme');
+            setSex(currentSex);
             setBloodGroup(data.bloodGroup || 'O+');
+            setLastDonationDate(donationStr);
             setAvailable(data.available ?? true);
             setZone(data.zone || 'Tunis');
             setMaxRadiusKm(data.maxRadiusKm ? String(data.maxRadiusKm) : '20');
@@ -169,7 +232,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
         }
     }, [navigation]);
 
-    // 🔒 Rechargement synchrone de l'état à chaque affichage
     useFocusEffect(
         useCallback(() => {
             loadProfile();
@@ -186,10 +248,40 @@ export const ProfileScreen = ({ navigation }: Props) => {
 
         try {
             setSaving(true);
+
+            let calculatedReeval = profile?.reevalDate || null;
+            let calculatedStatus = profile?.eligibilityStatus || 'eligible';
+
+            if (lastDonationDate.trim()) {
+                const parsedDonation = toLocalMidnight(lastDonationDate.trim());
+                if (parsedDonation) {
+                    const restMonths = sex === 'femme' ? 3 : 2;
+                    const donationRestDate = new Date(parsedDonation);
+                    donationRestDate.setMonth(donationRestDate.getMonth() + restMonths);
+
+                    const y = donationRestDate.getFullYear();
+                    const m = String(donationRestDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(donationRestDate.getDate()).padStart(2, '0');
+                    calculatedReeval = `${y}-${m}-${d}`;
+
+                    const todayNow = new Date();
+                    todayNow.setHours(0, 0, 0, 0);
+
+                    if (donationRestDate > todayNow) {
+                        calculatedStatus = 'temporaire';
+                    } else if (calculatedStatus === 'temporaire') {
+                        calculatedStatus = 'eligible';
+                    }
+                }
+            }
+
             const updated = await updateDonorProfile(token, {
                 fullName: fullName.trim(),
                 sex,
                 bloodGroup,
+                lastDonationDate: lastDonationDate.trim() || null,
+                reevalDate: calculatedReeval,
+                eligibilityStatus: calculatedStatus,
                 available,
                 zone: zone.trim(),
                 maxRadiusKm: parseInt(maxRadiusKm, 10) || 20,
@@ -209,25 +301,23 @@ export const ProfileScreen = ({ navigation }: Props) => {
         }
     };
 
-    const parseDateString = (dateStr?: string | null): Date | null => {
-        if (!dateStr) return null;
-        const parsed = new Date(dateStr);
-        if (!isNaN(parsed.getTime())) {
-            parsed.setHours(0, 0, 0, 0);
-            return parsed;
-        }
-        return null;
-    };
+    const lastDonationMidnight = toLocalMidnight(lastDonationDate || profile?.lastDonationDate);
 
-    const lastDonationDateObj = parseDateString(profile?.lastDonationDate);
-    const reevalDateObj = parseDateString(profile?.reevalDate || profile?.nextDonationPossibleDate);
+    // Calcul de la date de réévaluation exacte pour le don
+    let donationRestMidnight: Date | null = null;
+    if (lastDonationMidnight) {
+        donationRestMidnight = new Date(lastDonationMidnight);
+        const restMonths = sex === 'femme' ? 3 : 2;
+        donationRestMidnight.setMonth(donationRestMidnight.getMonth() + restMonths);
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 🔒 Statut par défaut : 'en_attente'
+    const rawStatus = profile?.eligibilityStatus || 'en_attente';
+    const isPastReeval = donationRestMidnight ? donationRestMidnight <= today : false;
     const eligibilityStatus: 'eligible' | 'temporaire' | 'definitif' | 'en_attente' =
-        profile?.eligibilityStatus || 'en_attente';
+        (rawStatus === 'temporaire' && isPastReeval) ? 'eligible' : rawStatus;
 
     let bannerStyle = styles.statusBannerWaiting;
     let textStyle = styles.textWaiting;
@@ -241,15 +331,29 @@ export const ProfileScreen = ({ navigation }: Props) => {
         bannerStyle = styles.statusBannerWaiting;
         textStyle = styles.textWaiting;
         bannerMessage = "⚠️ Questionnaire non rempli. Veuillez remplir la fiche d'éligibilité.";
+    } else if (lastDonationMidnight && donationRestMidnight) {
+        const formattedDonation = lastDonationMidnight.toLocaleDateString('fr-FR');
+        const formattedReeval = donationRestMidnight.toLocaleDateString('fr-FR');
+        const restMonths = sex === 'femme' ? 3 : 2;
+
+        if (donationRestMidnight <= today) {
+            bannerStyle = styles.statusBannerEligible;
+            textStyle = styles.textEligible;
+            bannerMessage = `🩸 Dernier don le ${formattedDonation}. 🎉 Repos de ${restMonths} mois terminé, vous êtes éligible !`;
+        } else {
+            bannerStyle = styles.statusBannerWaiting;
+            textStyle = styles.textWaiting;
+            bannerMessage = `🩸 Dernier don le ${formattedDonation}. ⏳ Repos obligatoire (${restMonths} mois pour ${sex}) jusqu'au ${formattedReeval}.`;
+        }
     } else if (eligibilityStatus === 'temporaire') {
-        if (reevalDateObj) {
-            const isFinished = reevalDateObj <= today;
-            if (isFinished) {
+        const medicalReevalMidnight = toLocalMidnight(profile?.reevalDate);
+        if (medicalReevalMidnight) {
+            if (medicalReevalMidnight <= today) {
                 bannerStyle = styles.statusBannerEligible;
                 textStyle = styles.textEligible;
                 bannerMessage = "🎉 Votre période d'inactivité est terminée ! Vous êtes éligible aujourd'hui.";
             } else {
-                const formattedDate = reevalDateObj.toLocaleDateString('fr-FR');
+                const formattedDate = medicalReevalMidnight.toLocaleDateString('fr-FR');
                 bannerStyle = styles.statusBannerWaiting;
                 textStyle = styles.textWaiting;
                 bannerMessage = `⏳ Inéligible temporairement. Prochain don possible le ${formattedDate}`;
@@ -260,16 +364,9 @@ export const ProfileScreen = ({ navigation }: Props) => {
             bannerMessage = "⏳ Inéligible temporairement. En attente de réévaluation médicale.";
         }
     } else if (eligibilityStatus === 'eligible') {
-        if (reevalDateObj && reevalDateObj > today) {
-            const formattedDate = reevalDateObj.toLocaleDateString('fr-FR');
-            bannerStyle = styles.statusBannerWaiting;
-            textStyle = styles.textWaiting;
-            bannerMessage = `⏳ Prochain don possible le ${formattedDate}`;
-        } else {
-            bannerStyle = styles.statusBannerEligible;
-            textStyle = styles.textEligible;
-            bannerMessage = "🎉 Vous êtes éligible pour donner du sang aujourd'hui !";
-        }
+        bannerStyle = styles.statusBannerEligible;
+        textStyle = styles.textEligible;
+        bannerMessage = "🎉 Vous êtes éligible pour donner du sang aujourd'hui !";
     }
 
     const changeMonth = (increment: number) => {
@@ -278,12 +375,13 @@ export const ProfileScreen = ({ navigation }: Props) => {
         setCalendarDate(newDate);
     };
 
+    // 🔒 CALCUL PARFAIT DU CALENDRIER JOUR PAR JOUR
     const generateCalendarDays = () => {
         const year = calendarDate.getFullYear();
         const month = calendarDate.getMonth();
 
-        const firstDayOfMonth = new Date(year, month, 1);
-        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const firstDayOfMonth = new Date(year, month, 1, 0, 0, 0, 0);
+        const lastDayOfMonth = new Date(year, month + 1, 0, 0, 0, 0, 0);
 
         let startingDay = firstDayOfMonth.getDay() - 1;
         if (startingDay === -1) startingDay = 6;
@@ -295,29 +393,52 @@ export const ProfileScreen = ({ navigation }: Props) => {
             days.push({ day: null, date: null, isEligible: false, isLastDonation: false, isToday: false });
         }
 
+        const medicalReevalMidnight = toLocalMidnight(profile?.reevalDate);
+
         for (let i = 1; i <= daysInMonth; i++) {
-            const currentDate = new Date(year, month, i);
-            currentDate.setHours(0, 0, 0, 0);
+            const currentDate = new Date(year, month, i, 0, 0, 0, 0);
             const currentTime = currentDate.getTime();
 
-            const isLastDonation = Boolean(lastDonationDateObj && currentTime === lastDonationDateObj.getTime());
+            const isLastDonation = Boolean(
+                lastDonationMidnight && currentTime === lastDonationMidnight.getTime()
+            );
 
-            // 🔒 CALCUL STRICT DES CASES DU CALENDRIER
             let isDayEligible = false;
 
             if (eligibilityStatus === 'definitif' || eligibilityStatus === 'en_attente') {
-                isDayEligible = false; // ROUGE pour tout le mois
-            } else if (eligibilityStatus === 'temporaire') {
-                if (reevalDateObj) {
-                    isDayEligible = currentTime >= reevalDateObj.getTime();
-                } else {
-                    isDayEligible = false; // ROUGE tant qu'aucune date n'est dépassée
-                }
-            } else if (eligibilityStatus === 'eligible') {
-                if (reevalDateObj && currentTime < reevalDateObj.getTime()) {
+                isDayEligible = false;
+            } else if (lastDonationMidnight && donationRestMidnight) {
+                const donationTime = lastDonationMidnight.getTime();
+                const restTime = donationRestMidnight.getTime();
+
+                if (currentTime < donationTime) {
+                    // 🟢 1. AVANT la date du don = VERT (Éligible)
+                    isDayEligible = true;
+                } else if (currentTime === donationTime) {
+                    // 🔴 2. Jour du don = ROUGE (avec l'icône 🩸)
+                    isDayEligible = false;
+                } else if (currentTime < restTime) {
+                    // 🔴 3. Pendant le repos obligatoire (2 mois homme / 3 mois femme) = ROUGE
                     isDayEligible = false;
                 } else {
-                    isDayEligible = true; // VERT
+                    // 4. Après la fin du repos de don
+                    if (medicalReevalMidnight && currentTime < medicalReevalMidnight.getTime()) {
+                        isDayEligible = false;
+                    } else {
+                        isDayEligible = true; // 🟢 VERT : Ré-éligible !
+                    }
+                }
+            } else if (eligibilityStatus === 'temporaire') {
+                if (medicalReevalMidnight) {
+                    isDayEligible = currentTime >= medicalReevalMidnight.getTime();
+                } else {
+                    isDayEligible = false;
+                }
+            } else if (eligibilityStatus === 'eligible') {
+                if (medicalReevalMidnight && currentTime < medicalReevalMidnight.getTime()) {
+                    isDayEligible = false;
+                } else {
+                    isDayEligible = true;
                 }
             }
 
@@ -347,7 +468,7 @@ export const ProfileScreen = ({ navigation }: Props) => {
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                {/* 🩸 BANNIÈRE PROFIL CHARLES NICOLLE */}
+                {/* 🩸 BANNIÈRE PROFIL */}
                 <View style={headerStyles.headerBanner}>
                     <View style={headerStyles.topRow}>
                         <View style={headerStyles.brandContainer}>
@@ -372,13 +493,17 @@ export const ProfileScreen = ({ navigation }: Props) => {
                         <Text style={headerStyles.fullName}>{fullName || 'Donneur'}</Text>
                         <Text style={headerStyles.phoneText}>📞 {profile?.phone ? profile.phone : 'Non renseigné'}</Text>
 
-                        {/* 🩸 BADGES COMPRENANT L'ÉLIGIBILITÉ DU DONNEUR */}
+                        <Text style={headerStyles.lastDonationHeroText}>
+                            {lastDonationMidnight
+                                ? `🩸 Dernier don : ${lastDonationMidnight.toLocaleDateString('fr-FR')} (${sex === 'femme' ? 'repos 3 mois' : 'repos 2 mois'})`
+                                : '🩸 Aucun don enregistré'}
+                        </Text>
+
                         <View style={headerStyles.inlineBadges}>
                             <View style={headerStyles.subBadge}>
                                 <Text style={headerStyles.subBadgeText}>Sexe: {sex}</Text>
                             </View>
 
-                            {/* BADGE ÉLIGIBILITÉ DANS LA CARTE HERO */}
                             <View style={[
                                 headerStyles.subBadge,
                                 eligibilityStatus === 'eligible' && { backgroundColor: '#DCFCE7' },
@@ -405,7 +530,7 @@ export const ProfileScreen = ({ navigation }: Props) => {
                     <AnimatedHeartbeat />
                 </View>
 
-                {/* 📋 QUESTIONNAIRE D'ÉLIGIBILITÉ (M3) */}
+                {/* 📋 QUESTIONNAIRE D'ÉLIGIBILITÉ */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>📋 Questionnaire d'Éligibilité (استمارة الأهلية)</Text>
                     <Text style={styles.questionnaireSubText}>
@@ -503,20 +628,23 @@ export const ProfileScreen = ({ navigation }: Props) => {
                     <View style={styles.legendContainer}>
                         <View style={styles.legendItem}>
                             <View style={[styles.legendColor, { backgroundColor: '#DCFCE7', borderColor: '#16A34A' }]} />
-                            <Text style={styles.legendText}>🟢 Dernier don (🩸) & Éligible</Text>
+                            <Text style={styles.legendText}>🟢 Période d'éligibilité (Avant le don & Après le repos)</Text>
                         </View>
                         <View style={styles.legendItem}>
-                            <View style={[styles.legendColor, { backgroundColor: '#FEF2F2', borderColor: '#901818' }]} />
-                            <Text style={styles.legendText}>🔴 Repos obligatoire / Inéligible</Text>
+                            <View style={[styles.legendColor, { backgroundColor: '#FEE2E2', borderColor: '#901818' }]} />
+                            <Text style={styles.legendText}>🩸 Jour du don (Rouge + Goutte de sang)</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                            <View style={[styles.legendColor, { backgroundColor: '#FEF2F2', borderColor: '#EF4444' }]} />
+                            <Text style={styles.legendText}>🔴 Repos obligatoire ({sex === 'femme' ? '3 mois' : '2 mois'})</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* ⚙️ INFORMATIONS PERSONNELLES & PRÉFÉRENCES (MODIFIABLES) */}
+                {/* ⚙️ INFORMATIONS PERSONNELLES & PRÉFÉRENCES */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>⚙️ Mes Informations & Préférences</Text>
 
-                    {/* 🩸 CHAMP STATUT D'ÉLIGIBILITÉ EXPLICITE DANS LES INFORMATIONS */}
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Statut d'Éligibilité Actuel</Text>
                         <View style={[
@@ -533,15 +661,26 @@ export const ProfileScreen = ({ navigation }: Props) => {
                                 {eligibilityStatus === 'en_attente' && '⚠️ Questionnaire en attente'}
                             </Text>
                             <Text style={styles.eligibilityFieldSub}>
-                                {eligibilityStatus === 'eligible' && 'Vous pouvez vous inscrire aux collectes et recevoir les alertes d’urgence.'}
-                                {eligibilityStatus === 'temporaire' && (reevalDateObj ? `Prochaine réévaluation médicale possible le : ${reevalDateObj.toLocaleDateString('fr-FR')}` : 'Actuellement non éligible temporairement.')}
-                                {eligibilityStatus === 'definitif' && 'Conformément aux règles du CNTS, le don vous est définitivement contre-indiqué.'}
-                                {eligibilityStatus === 'en_attente' && 'Veuillez remplir le questionnaire d’éligibilité ci-dessus.'}
+                                {lastDonationMidnight
+                                    ? `Dernier don : ${lastDonationMidnight.toLocaleDateString('fr-FR')}. Intervalle légal (${sex === 'femme' ? '3 mois' : '2 mois'}). ${donationRestMidnight ? `Prochain don le : ${donationRestMidnight.toLocaleDateString('fr-FR')}` : ''}`
+                                    : (eligibilityStatus === 'eligible'
+                                        ? 'Vous pouvez vous inscrire aux collectes et recevoir les alertes d’urgence.'
+                                        : 'En attente de mise à jour.')}
                             </Text>
                         </View>
                     </View>
 
-                    {/* 👤 CHAMP NOM ET PRÉNOM */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Date du Dernier Don (Format AAAA-MM-JJ)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={lastDonationDate}
+                            onChangeText={setLastDonationDate}
+                            placeholder="Exemple: 2026-08-10"
+                            placeholderTextColor="#94A3B8"
+                        />
+                    </View>
+
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Nom & Prénom</Text>
                         <TextInput
@@ -553,7 +692,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                         />
                     </View>
 
-                    {/* 🩸 SÉLECTION DU GROUPE SANGUIN */}
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Groupe Sanguin</Text>
                         <View style={styles.bloodGridContainer}>
@@ -575,9 +713,8 @@ export const ProfileScreen = ({ navigation }: Props) => {
                         </View>
                     </View>
 
-                    {/* 🚻 SÉLECTION DU SEXE */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Sexe</Text>
+                        <Text style={styles.inputLabel}>Sexe (Règle d'intervalle entre dons)</Text>
                         <View style={styles.sexSelectorContainer}>
                             <TouchableOpacity
                                 style={[styles.sexChip, sex === 'homme' && styles.sexChipSelected]}
@@ -663,7 +800,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Bouton Déconnexion */}
                 <TouchableOpacity
                     style={styles.logoutButton}
                     onPress={async () => {
@@ -675,7 +811,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* 🇹🇳 MODAL LISTE DÉROULANTE DES 24 GOUVERNORATS */}
             <Modal visible={showZoneModal} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -711,7 +846,6 @@ export const ProfileScreen = ({ navigation }: Props) => {
                 </View>
             </Modal>
 
-            {/* 🏠 BARRE DE NAVIGATION INFÉRIEURE */}
             <View style={styles.bottomTabBar}>
                 <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
                     <Text style={styles.navIcon}>🏠</Text>
@@ -853,6 +987,7 @@ const headerStyles = StyleSheet.create({
     avatarText: { color: '#901818', fontSize: 24, fontWeight: '900' },
     fullName: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
     phoneText: { fontSize: 13, color: '#FECACA', marginTop: 2 },
+    lastDonationHeroText: { fontSize: 13, color: '#FFFFFF', fontWeight: 'bold', marginTop: 4 },
     inlineBadges: { flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' },
     subBadge: { backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
     subBadgeText: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
@@ -941,14 +1076,14 @@ const styles = StyleSheet.create({
     },
     dayBoxEligible: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
     dayBoxIneligible: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
-    dayBoxLastDonation: { backgroundColor: '#BBF7D0', borderColor: '#16A34A' },
-    dayBoxToday: { borderWidth: 2, borderColor: '#901818' },
+    dayBoxLastDonation: { backgroundColor: '#FEE2E2', borderColor: '#901818', borderWidth: 1.5 },
+    dayBoxToday: { borderWidth: 2, borderColor: '#2563EB' },
     dayText: { fontSize: 13, fontWeight: 'bold' },
     dayTextEligible: { color: '#15803D' },
     dayTextIneligible: { color: '#991B1B' },
-    dayTextLastDonation: { color: '#14532D' },
-    dayTextToday: { color: '#901818' },
-    lastDonationIcon: { fontSize: 10 },
+    dayTextLastDonation: { color: '#901818' },
+    dayTextToday: { color: '#2563EB' },
+    lastDonationIcon: { fontSize: 10, marginTop: -2 },
 
     legendContainer: { marginTop: 12, gap: 6 },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -968,12 +1103,7 @@ const styles = StyleSheet.create({
         color: '#0F172A',
     },
 
-    // STYLES DU CHAMP EXPLICITE ÉLIGIBILITÉ
-    eligibilityFieldBox: {
-        padding: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-    },
+    eligibilityFieldBox: { padding: 12, borderRadius: 12, borderWidth: 1 },
     eligibilityBoxEligible: { backgroundColor: '#ECFDF5', borderColor: '#10B981' },
     eligibilityBoxTemporaire: { backgroundColor: '#FFFBEB', borderColor: '#F59E0B' },
     eligibilityBoxDefinitif: { backgroundColor: '#FEF2F2', borderColor: '#EF4444' },

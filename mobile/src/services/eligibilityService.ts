@@ -33,8 +33,206 @@ export interface EvaluationResult {
     reasons: string[];
 }
 
+// ------------------------------------------------------------------
+// 🛠️ FONCTIONS UTILITAIRES DE DATES (Exactement identiques à rules/dates.ts)
+// ------------------------------------------------------------------
+const toDate = (isoStr: string): Date => {
+    const [y, m, d] = isoStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+};
+
+const addDays = (d: Date, days: number): Date => {
+    const res = new Date(d);
+    res.setDate(res.getDate() + days);
+    return res;
+};
+
+const addMonths = (d: Date, months: number): Date => {
+    const res = new Date(d);
+    res.setMonth(res.getMonth() + months);
+    return res;
+};
+
+const ageOn = (birth: Date, now: Date): number => {
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+};
+
+const iso = (d: Date): string => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
 /**
- * 🔒 Fonction utilitaire pour sauvegarder le statut dans TOUTES les clés de cache du profil
+ * 🔒 Transposition directe de evaluateEligibility() de backend/src/rules/eligibility.ts
+ */
+export const evaluateEligibilityLocal = (
+    answers: EligibilityAnswers,
+    now: Date = new Date()
+): EvaluationResult => {
+    type RuleOutcome = 'PERMANENT' | 'MEDICAL_REVIEW' | 'TEMP_DEFERRED';
+    interface Hit {
+        id: string;
+        outcome: RuleOutcome;
+        reeval?: Date | null;
+    }
+
+    const hits: Hit[] = [];
+
+    // E01 : Moins de 18 ans
+    if (answers.birthDate) {
+        const birth = toDate(answers.birthDate);
+        if (ageOn(birth, now) < 18) {
+            hits.push({ id: 'E01', outcome: 'TEMP_DEFERRED', reeval: addMonths(birth, 18 * 12) });
+        }
+    }
+
+    // E01b : Plus de 65 ans
+    if (answers.birthDate) {
+        const birth = toDate(answers.birthDate);
+        if (ageOn(birth, now) > 65) {
+            hits.push({ id: 'E01b', outcome: 'MEDICAL_REVIEW' });
+        }
+    }
+
+    // E02 : Poids < 50kg
+    if (answers.weightKg !== undefined && answers.weightKg < 50) {
+        hits.push({ id: 'E02', outcome: 'TEMP_DEFERRED', reeval: null });
+    }
+
+    // E04 : Fièvre / Infection récente (14 jours)
+    if (answers.feverInfectionRecent) {
+        const base = answers.feverRecoveryDate ? toDate(answers.feverRecoveryDate) : now;
+        const reeval = addDays(base, 14);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E04', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    }
+
+    // E05 : Antibiotiques (14 jours après fin du traitement)
+    if (answers.antibioticsEndDate) {
+        const start = toDate(answers.antibioticsEndDate);
+        const reeval = addDays(start, 14);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E05', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    }
+
+    // E06 : Tatouage / Piercing (4 mois)
+    if (answers.tattooPiercingDate) {
+        const start = toDate(answers.tattooPiercingDate);
+        const reeval = addMonths(start, 4);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E06', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    }
+
+    // E07 : Chirurgie (6 mois)
+    if (answers.surgeryDate) {
+        const start = toDate(answers.surgeryDate);
+        const reeval = addMonths(start, 6);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E07', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    }
+
+    // E08 : Transfusion reçue (4 mois)
+    if (answers.transfusionReceivedDate) {
+        const start = toDate(answers.transfusionReceivedDate);
+        const reeval = addMonths(start, 4);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E08', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    }
+
+    // E09 : Grossesse / Accouchement (6 mois)
+    if (answers.deliveryDate) {
+        const reeval = addMonths(toDate(answers.deliveryDate), 6);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E09', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    } else if (answers.pregnant) {
+        hits.push({ id: 'E09', outcome: 'TEMP_DEFERRED', reeval: null });
+    }
+
+    // E10 : Vaccination récente (1 mois)
+    if (answers.vaccinationDate) {
+        const start = toDate(answers.vaccinationDate);
+        const reeval = addMonths(start, 1);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E10', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    }
+
+    // E11 : Séjour zone paludisme (6 mois)
+    if (answers.malariaZoneReturnDate) {
+        const start = toDate(answers.malariaZoneReturnDate);
+        const reeval = addMonths(start, 6);
+        if (now.getTime() < reeval.getTime()) {
+            hits.push({ id: 'E11', outcome: 'TEMP_DEFERRED', reeval });
+        }
+    }
+
+    // E12 : Antécédents infectieux (VIH / Hépatite) -> Définitif
+    if (answers.infectiousHistory) {
+        hits.push({ id: 'E12', outcome: 'PERMANENT' });
+    }
+
+    // E13 : Drogues injectables -> Définitif
+    if (answers.injectedDrugUseEver) {
+        hits.push({ id: 'E13', outcome: 'PERMANENT' });
+    }
+
+    // E14 : Maladie chronique -> Avis médical
+    if (answers.chronicDisease) {
+        hits.push({ id: 'E14', outcome: 'MEDICAL_REVIEW' });
+    }
+
+    // E15 : Médicaments réguliers -> Avis médical
+    if (answers.regularMedication) {
+        hits.push({ id: 'E15', outcome: 'MEDICAL_REVIEW' });
+    }
+
+    // --- CALCUL DE LA DATE DE RÉÉVALUATION LA PLUS TARDIVE ---
+    const validReevals = hits
+        .map((h) => h.reeval)
+        .filter((d): d is Date => d instanceof Date);
+
+    let latestReeval: Date | null = null;
+    if (validReevals.length > 0) {
+        latestReeval = validReevals.reduce(
+            (acc, d) => (d.getTime() > acc.getTime() ? d : acc),
+            validReevals[0]
+        );
+    }
+
+    const reevalDate = latestReeval ? iso(latestReeval) : null;
+    const firedRules = hits.map((h) => h.id);
+
+    const has = (outcome: RuleOutcome) => hits.some((h) => h.outcome === outcome);
+
+    // --- PRIORITÉS : PERMANENT > MEDICAL_REVIEW > TEMP_DEFERRED > ELIGIBLE ---
+    if (has('PERMANENT')) {
+        return { isEligible: false, status: 'definitif', reevalDate: null, reasons: firedRules };
+    }
+    if (has('MEDICAL_REVIEW')) {
+        return { isEligible: false, status: 'en_attente', reevalDate, reasons: firedRules };
+    }
+    if (has('TEMP_DEFERRED')) {
+        return { isEligible: false, status: 'temporaire', reevalDate, reasons: firedRules };
+    }
+
+    return { isEligible: true, status: 'eligible', reevalDate: null, reasons: [] };
+};
+
+/**
+ * Persistance dans AsyncStorage pour le profil global et le profil par téléphone
  */
 const saveProfileEligibility = async (status: string, reevalDate?: string | null) => {
     try {
@@ -44,68 +242,15 @@ const saveProfileEligibility = async (status: string, reevalDate?: string | null
             profile.eligibilityStatus = status;
             profile.reevalDate = reevalDate || null;
 
-            // 1. Sauvegarde dans la clé principale
             await AsyncStorage.setItem('user_profile', JSON.stringify(profile));
 
-            // 2. Sauvegarde dans la clé par numéro de téléphone
             if (profile.phone) {
                 await AsyncStorage.setItem(`user_profile_${profile.phone}`, JSON.stringify(profile));
             }
         }
     } catch (err) {
-        console.log('Erreur sauvegarde locale du statut d’éligibilité:', err);
+        console.log('Erreur sauvegarde locale eligibility:', err);
     }
-};
-
-/**
- * Évaluation locale de secours (Fallback)
- */
-export const evaluateEligibilityLocal = (answers: EligibilityAnswers): EvaluationResult => {
-    const reasons: string[] = [];
-    let status: 'eligible' | 'temporaire' | 'definitif' = 'eligible';
-
-    if (answers.birthDate) {
-        const birth = new Date(answers.birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birth.getFullYear();
-        const m = today.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-            age--;
-        }
-        if (age < 18) {
-            reasons.push('العمر أقل من 18 سنة (الحد الأدنى 18 سنة) / Âge inférieur à 18 ans');
-            status = 'temporaire';
-        } else if (age > 65) {
-            reasons.push('العمر يتجاوز 65 سنة / Âge supérieur à 65 ans');
-            status = 'temporaire';
-        }
-    }
-
-    if (answers.weightKg < 50) {
-        reasons.push('الوزن أقل من 50 كغ (الحد الأدنى 50 كغ) / Poids < 50kg');
-        status = 'temporaire';
-    }
-
-    if (answers.infectiousHistory || answers.injectedDrugUseEver) {
-        reasons.push('سجل أمراض معدية أو تعاطي مخدرات / Antécédents infectieux ou substances');
-        status = 'definitif';
-    }
-
-    if (answers.chronicDisease) {
-        reasons.push('وجود مرض مزمن / Maladie chronique');
-        status = 'temporaire';
-    }
-
-    if (answers.pregnant) {
-        reasons.push('حمل حالي / Grossesse en cours');
-        status = 'temporaire';
-    }
-
-    return {
-        isEligible: status === 'eligible',
-        status,
-        reasons,
-    };
 };
 
 /**
@@ -150,27 +295,25 @@ export const submitEligibilityForm = async (
 
         const backendData = await response.json();
 
-        // Extraction stricte du statut selon l'Enum Swagger (eligible, temporaire, definitif, en_attente)
         const status: 'en_attente' | 'eligible' | 'temporaire' | 'definitif' =
-            backendData.result || backendData.status || (backendData.isEligible ? 'eligible' : 'temporaire');
+            backendData.status || backendData.result || localEval.status;
 
-        const reevalDate = backendData.reevalDate || null;
+        const reevalDate = backendData.reevalDate !== undefined ? backendData.reevalDate : localEval.reevalDate;
         const isEligible = status === 'eligible';
 
-        // 🔒 Enregistrement dans les deux clés de profil AsyncStorage
         await saveProfileEligibility(status, reevalDate);
 
         return {
             isEligible,
             status,
             reevalDate,
-            reasons: Array.isArray(backendData.reasons) ? backendData.reasons : localEval.reasons,
+            reasons: Array.isArray(backendData.reasons) ? backendData.reasons : (Array.isArray(backendData.firedRules) ? backendData.firedRules : localEval.reasons),
         };
     } catch (error: any) {
         console.warn('API non disponible, utilisation du fallback local:', error.message);
 
-        // 🔒 SAUVEGARDE DU RESULTAT DU FALLBACK LOCAL (Cas sans backend)
-        await saveProfileEligibility(localEval.status, localEval.reevalDate || null);
+        // Sauvegarde synchrone du résultat calculé par le moteur de règles local
+        await saveProfileEligibility(localEval.status, localEval.reevalDate);
 
         return localEval;
     }

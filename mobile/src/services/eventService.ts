@@ -34,12 +34,14 @@ export const getDonorProfile = async (token: string): Promise<DonorProfile> => {
     const localProfileStr = await AsyncStorage.getItem('user_profile');
     const localProfile = localProfileStr ? JSON.parse(localProfileStr) : null;
 
-    // 🔒 Priorité absolue au statut d'éligibilité évalué localement
+    // 🔒 Priorité absolue au statut et aux dates évalués localement
     const localStatus = localProfile?.eligibilityStatus;
     const localReeval = localProfile?.reevalDate;
+    const localLastDonation = localProfile?.lastDonationDate;
 
     const eligibilityStatus = localStatus || apiData.eligibilityStatus || apiData.status || apiData.result || 'en_attente';
     const reevalDate = localReeval !== undefined ? localReeval : (apiData.reevalDate ?? null);
+    const lastDonationDate = localLastDonation !== undefined ? localLastDonation : (apiData.lastDonationDate ?? null);
 
     const updatedProfile: DonorProfile = {
         ...apiData,
@@ -55,6 +57,8 @@ export const getDonorProfile = async (token: string): Promise<DonorProfile> => {
         available: localProfile?.available ?? apiData.available ?? true,
         eligibilityStatus,
         reevalDate,
+        lastDonationDate,
+        nextDonationPossibleDate: reevalDate,
     };
 
     const userPhone = updatedProfile.phone;
@@ -76,6 +80,9 @@ export const updateDonorProfile = async (
         position?: { latitude: number; longitude: number };
         available?: boolean;
         maxRadiusKm?: number;
+        lastDonationDate?: string | null;
+        reevalDate?: string | null;
+        eligibilityStatus?: string;
         notifPrefs?: {
             alertsEnabled?: boolean;
             quietHours?: { start: string; end: string };
@@ -91,7 +98,7 @@ export const updateDonorProfile = async (
         );
         apiData = response.data || {};
     } catch (e: any) {
-        console.log('Erreur PATCH API');
+        console.log('Erreur PATCH API, enregistrement local effectué');
     }
 
     const localProfileStr = await AsyncStorage.getItem('user_profile');
