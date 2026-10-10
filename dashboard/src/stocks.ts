@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, USE_MOCK } from './api'
+import { api, ApiError, USE_MOCK } from './api'
 import { GROUPS } from './requests'
 import { stocks as seed } from './data'
 
@@ -46,6 +46,24 @@ export async function addStock(d: NewStock): Promise<Stock[]> {
     return order(mock)
   }
   const res = await api<InstitutionStock>('/stocks', { method: 'POST', body: JSON.stringify(d) })
+  return order(res.stocks.map(fromLine))
+}
+
+// Ajuste le stock d'un groupe : delta positif pour ajouter, négatif pour retirer (jamais sous 0).
+export async function adjustStock(group: string, delta: number): Promise<Stock[]> {
+  if (USE_MOCK) {
+    const s = mock.find((x) => x.group === group)
+    if (s) {
+      if (s.qty + delta < 0) throw new ApiError(400, 'Stock insuffisant')
+      s.qty += delta
+      s.level = levelOf(s.qty, s.threshold)
+    }
+    return order(mock)
+  }
+  const res = await api<InstitutionStock>(`/stocks/${encodeURIComponent(group)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ delta }),
+  })
   return order(res.stocks.map(fromLine))
 }
 
