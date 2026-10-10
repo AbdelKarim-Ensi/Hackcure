@@ -223,3 +223,20 @@ export class AlertPayloadDto {
   @ApiProperty({ example: '2026-10-03T18:00:00.000Z' })
   deadline!: string;
 }
+
+// AJOUT : T14 - décision de l'admin sur une demande retenue en en_revue
+export enum ReviewDecision {
+  APPROVE = 'approve',
+  REJECT = 'reject',
+}
+
+export class ReviewRequestDto {
+  @ApiProperty({
+    enum: ReviewDecision,
+    enumName: 'ReviewDecision',
+    example: ReviewDecision.APPROVE,
+    description: 'approve : la demande passe en active et la vague 1 démarre. reject : la demande est clôturée, aucune alerte envoyée.',
+  })
+  @IsEnum(ReviewDecision)
+  decision!: ReviewDecision;
+}

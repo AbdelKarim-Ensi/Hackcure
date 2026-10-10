@@ -2,7 +2,7 @@
 // AJOUT : T5.5 - live branché sur RequestsService.getLiveState (ancien mock T3 retiré).
 // T2.4 : POST /requests exige un établissement validé (F5).
 // AJOUT : T4.4 / T4.5 - create, list, getOne et respond branchés sur RequestsService.
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -13,6 +13,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiTags,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { ApiRoles } from '../common/decorators/api-roles.decorator';
@@ -27,6 +28,7 @@ import {
   RequestDto,
   RespondDto,
   RespondResultDto,
+  ReviewRequestDto,
 } from './dto/requests.dto';
 
 const mockRequest = (id: string = MOCK_IDS.request): RequestDto => ({
@@ -59,6 +61,7 @@ export class RequestsController {
   })
   @ApiCreatedResponse({ type: RequestDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
+  @ApiUnprocessableEntityResponse({ type: ErrorResponseDto, description: "Demande refusée par la détection d'anomalies (échéance déjà dépassée)" })
   create(@Body() dto: CreateRequestDto, @CurrentUser() user: AuthenticatedUser): Promise<RequestDto> {
     return this.requests.create(dto, user);
   }
@@ -73,6 +76,18 @@ export class RequestsController {
   @ApiOkResponse({ type: [RequestDto] })
   list(@CurrentUser() user: AuthenticatedUser, @Query('status') status?: RequestStatus): Promise<RequestDto[]> {
     return this.requests.list(user, status);
+  }
+
+  // AJOUT : T14 - déclaré AVANT @Get(':id') pour que « review » ne soit pas lu comme un identifiant.
+  @Get('review')
+  @ApiRoles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Demandes retenues en revue (admin)',
+    description: "Demandes en en_revue, score d'anomalie décroissant. Aucune alerte n'est partie pour elles tant qu'un admin n'a pas décidé.",
+  })
+  @ApiOkResponse({ type: [RequestDto] })
+  listForReview(): Promise<RequestDto[]> {
+    return this.requests.listForReview();
   }
 
   @Get(':id')
@@ -98,6 +113,20 @@ export class RequestsController {
   // AJOUT : T5.5 - données réelles (jauge, vagues, donneurs en route anonymisés) ; 403 si l'hôpital n'est pas propriétaire.
   live(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser): Promise<LiveStateDto> {
     return this.requests.getLiveState(id, user);
+  }
+
+  @Patch(':id/review')
+  @ApiRoles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Valider ou rejeter une demande en revue (admin)',
+    description: 'approve : la demande passe en active et la vague 1 démarre. reject : la demande est clôturée sans aucune alerte.',
+  })
+  @ApiParam({ name: 'id', example: MOCK_IDS.request })
+  @ApiOkResponse({ type: RequestDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: "La demande n'est pas en revue, ou son échéance est dépassée" })
+  review(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReviewRequestDto): Promise<RequestDto> {
+    return this.requests.review(id, dto.decision);
   }
 
   @Post(':id/respond')

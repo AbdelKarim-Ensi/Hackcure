@@ -525,6 +525,58 @@
         "x-roles": [
           "donneur"
         ]
+      },
+      "delete": {
+        "description": "Supprime formulaires de santé et notifications, efface position, zone et consentement, anonymise le compte. Les dons et réponses passés sont conservés sans identité.",
+        "operationId": "DonorsController_deleteMe",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Compte anonymisé"
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : donneur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profil non créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Supprimer mon compte (anonymisation)",
+        "tags": [
+          "donors"
+        ],
+        "x-roles": [
+          "donneur"
+        ]
       }
     },
     "/donors/{id}/eligibility-form": {
@@ -1046,6 +1098,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Demande refusée par la détection d'anomalies (échéance déjà dépassée)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1121,6 +1183,60 @@
         "x-roles": [
           "hopital",
           "direction",
+          "admin"
+        ]
+      }
+    },
+    "/requests/review": {
+      "get": {
+        "description": "Demandes en en_revue, score d'anomalie décroissant. Aucune alerte n'est partie pour elles tant qu'un admin n'a pas décidé.",
+        "operationId": "RequestsController_listForReview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RequestDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Demandes retenues en revue (admin)",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
           "admin"
         ]
       }
@@ -1267,6 +1383,97 @@
         "x-roles": [
           "hopital",
           "direction",
+          "admin"
+        ]
+      }
+    },
+    "/requests/{id}/review": {
+      "patch": {
+        "description": "approve : la demande passe en active et la vague 1 démarre. reject : la demande est clôturée sans aucune alerte.",
+        "operationId": "RequestsController_review",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La demande n'est pas en revue, ou son échéance est dépassée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Valider ou rejeter une demande en revue (admin)",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
           "admin"
         ]
       }
@@ -3239,6 +3446,31 @@
           "gauge",
           "waves",
           "donorsEnRoute"
+        ]
+      },
+      "ReviewDecision": {
+        "type": "string",
+        "enum": [
+          "approve",
+          "reject"
+        ],
+        "description": "approve : la demande passe en active et la vague 1 démarre. reject : la demande est clôturée, aucune alerte envoyée."
+      },
+      "ReviewRequestDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "example": "approve",
+            "description": "approve : la demande passe en active et la vague 1 démarre. reject : la demande est clôturée, aucune alerte envoyée.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDecision"
+              }
+            ]
+          }
+        },
+        "required": [
+          "decision"
         ]
       },
       "ResponseType": {
