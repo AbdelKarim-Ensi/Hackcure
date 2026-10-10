@@ -13,7 +13,13 @@ HOSP="+21600010001"                     # Hôpital Charles Nicolle (seed)
 json() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let o=JSON.parse(s);for(const k of process.argv[1].split("."))o=o?.[k];console.log(o??"")})' "$1"; }
 token() {
   local r v
-  r=$(curl -s -X POST "$API/auth/login" -H 'Content-Type: application/json' -d "{\"phone\":\"$1\",\"password\":\"$PASS\"}")
+  for _try in 1 2 3 4 5 6 7 8; do
+    r=$(curl -s -X POST "$API/auth/login" -H 'Content-Type: application/json' -d "{\"phone\":\"$1\",\"password\":\"$PASS\"}")
+    case "$r" in
+      *Throttler*|*"Too Many"*) echo "   (limite de débit sur le login, attente 10 s)" >&2; sleep 10 ;;
+      *) break ;;
+    esac
+  done
   for k in accessToken access_token token; do v=$(echo "$r" | json "$k" 2>/dev/null || true); [ -n "$v" ] && { echo "$v"; return; }; done
   echo "Login échoué pour $1 : $r" >&2; exit 1
 }
