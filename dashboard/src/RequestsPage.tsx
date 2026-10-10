@@ -1,12 +1,45 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { fetchLive } from './live'
 import { useProfile } from './profiles'
 import { listRequests, show, STATUS_LABEL, type RequestRow } from './requests'
+
+const POLL_MS = 5000
+
+// Complète `covered` avec la jauge réelle (gauge.accepted) ; en cas d'échec, la ligne garde sa valeur.
+async function withGauge(rows: RequestRow[], only?: (r: RequestRow) => boolean): Promise<RequestRow[]> {
+  return Promise.all(rows.map(async (r) => {
+    if (only && !only(r)) return r
+    try { return { ...r, covered: (await fetchLive(r.id)).gauge.accepted } } catch { return r }
+  }))
+}
 
 export function Requests() {
   const { profile } = useProfile()
   const [rows, setRows] = useState<RequestRow[] | null>(null)
-  useEffect(() => { listRequests().then(setRows).catch(() => setRows([])) }, [])
+
+  useEffect(() => {
+    let alive = true
+    let timer: ReturnType<typeof setInterval> | undefined
+    listRequests()
+      .then((list) => withGauge(list))
+      .then((list) => {
+        if (!alive) return
+        setRows(list)
+        if (!list.some((r) => r.status === 'active')) return
+        // Rafraîchit seulement les demandes actives ; les autres gardent leur valeur déjà chargée.
+        timer = setInterval(() => {
+          setRows((cur) => {
+            if (!cur) return cur
+            withGauge(cur, (r) => r.status === 'active').then((next) => { if (alive) setRows(next) })
+            return cur
+          })
+        }, POLL_MS)
+      })
+      .catch(() => { if (alive) setRows([]) })
+    return () => { alive = false; if (timer) clearInterval(timer) }
+  }, [])
+
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
