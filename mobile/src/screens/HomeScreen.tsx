@@ -595,10 +595,21 @@ export const HomeScreen = ({ navigation }: Props) => {
                     <Text style={styles.navLabel}>Profil</Text>
                 </TouchableOpacity>
             </View>
+            {/* BOUTON ASSISTANT FLOTTANT */}
+            <TouchableOpacity
+                style={styles.fabAssistant}
+                onPress={() => navigation.navigate('Assistant' as any)}
+            >
+                <Text style={styles.fabIcon}>💬</Text>
+            </TouchableOpacity>
+
+            <View style={styles.bottomTabBar}>
+                {/* ... vos boutons de navigation existants ... */}
+            </View> {/* AJOUTEZ CETTE BALISE FERMANTE ICI */}
+
         </SafeAreaView>
     );
 };
-
 // --- STYLES ---
 const heartbeatStyles = StyleSheet.create({
     container: {
@@ -850,4 +861,25 @@ const styles = StyleSheet.create({
     navIconActive: { opacity: 1 },
     navLabel: { fontSize: 11, color: '#64748B', marginTop: 3 },
     navLabelActive: { color: '#901818', fontWeight: 'bold' },
+    // --- Styles du bouton assistant ---
+    fabAssistant: {
+        position: 'absolute',
+        bottom: 90, // Juste au-dessus de la bottomTabBar
+        right: 20,
+        backgroundColor: '#901818',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 6,
+        zIndex: 10,
+    },
+    fabIcon: {
+        fontSize: 28,
+    },
 });
