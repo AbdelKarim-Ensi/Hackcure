@@ -33,7 +33,7 @@ type SlotDef = { time: string; capacity?: number };
 type EligibilityDonor = Pick<Donor, 'lastDonationDate' | 'sex' | 'nextDonationPossibleDate'>;
 
 /** R5 : le donneur peut-il donner À LA DATE DE L'ÉVÉNEMENT ? Règle unique (module rules), réutilisée par la liste et l'inscription. */
-function eligibleOn(donor: EligibilityDonor, eventDate: string): boolean {
+export function eligibleOn(donor: EligibilityDonor, eventDate: string): boolean {
   if (donor.nextDonationPossibleDate && donor.nextDonationPossibleDate > eventDate) return false;
   return canDonateOn(donor.lastDonationDate, eventDate, 'whole_blood', toRulesSex(donor.sex));
 }
@@ -63,13 +63,8 @@ export class EventsService {
   /** Point de référence en SQL : position du donneur (lue en base, jamais exposée), sinon lat/lng fournis. */
   private refPoint(donorId: string | null, q: ListEventsQueryDto): { ref: string | null; params: Record<string, unknown> } {
     if (donorId) {
-      const sub = this.dataSource
-        .createQueryBuilder()
-        .select('dn.position')
-        .from(Donor, 'dn')
-        .where('dn.userId = :donorId')
-        .getQuery();
-      return { ref: `(${sub})`, params: { donorId } };
+      // SQL brut : le query builder enveloppe les colonnes geography dans ST_AsGeoJSON (type json), incompatible avec ST_Distance.
+      return { ref: '(SELECT dn.position FROM donors dn WHERE dn.user_id = :donorId)', params: { donorId } };
     }
     if (q.lat != null && q.lng != null) {
       return {
