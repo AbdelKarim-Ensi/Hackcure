@@ -23,7 +23,8 @@ export const PROFILES: Record<ProfileKey, { label: string; org: string; tagline:
   centre_transfusion: {
     label: 'Centre de transfusion', org: 'CNTS Tunis',
     tagline: 'Annoncez vos collectes de don volontaire.',
-    nav: [ACCUEIL, COLLECTES, STOCKS],
+    // AJOUT : Stocks réservé aux hôpitaux et banques de sang (avant : nav: [ACCUEIL, COLLECTES, STOCKS],)
+    nav: [ACCUEIL, COLLECTES],
   },
   croissant_rouge: {
     label: 'Croissant-Rouge', org: 'Croissant-Rouge tunisien',
