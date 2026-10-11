@@ -20,6 +20,20 @@ export interface RegistrationHistoryItem {
     };
 }
 
+export interface UrgentRequestItem {
+    id: string;
+    institutionId?: string;
+    institutionName: string;
+    bloodGroup: string;
+    quantity: number;
+    urgency: string;
+    status: string;
+    currentRadiusKm?: number;
+    maxRadiusKm?: number;
+    deadline?: string;
+    createdAt?: string;
+}
+
 export const getDonorProfile = async (token: string): Promise<DonorProfile> => {
     let apiData: any = {};
     try {
@@ -34,7 +48,6 @@ export const getDonorProfile = async (token: string): Promise<DonorProfile> => {
     const localProfileStr = await AsyncStorage.getItem('user_profile');
     const localProfile = localProfileStr ? JSON.parse(localProfileStr) : null;
 
-    // 🔒 Priorité absolue au statut et aux dates évalués localement
     const localStatus = localProfile?.eligibilityStatus;
     const localReeval = localProfile?.reevalDate;
     const localLastDonation = localProfile?.lastDonationDate;
@@ -137,28 +150,40 @@ export const getUpcomingEvents = async (
 
         const rawEvents = Array.isArray(response.data) ? response.data : [];
 
-        return rawEvents.map((evt: any) => ({
-            id: evt.id,
-            organizerId: evt.organizerId || evt.organizer_id,
-            title: evt.title,
-            placeName: evt.placeName || evt.place_name || 'Lieu non spécifié',
-            address: evt.address || '',
-            position: (typeof evt.position === 'object' && evt.position !== null && 'latitude' in evt.position)
-                ? evt.position
-                : { latitude: 36.8065, longitude: 10.1815 },
-            eventDate: evt.eventDate || evt.event_date,
-            slots: Array.isArray(evt.slots)
-                ? evt.slots.map((s: any) =>
-                    typeof s === 'string' ? { time: s, capacity: evt.capacity || 20 } : s
-                )
-                : [],
-            capacity: evt.capacity || 40,
-            registeredCount: evt.registeredCount ?? evt.registered_count ?? 0,
-            targetGroups: evt.targetGroups || evt.target_groups || [],
-            conditions: evt.conditions || '',
-            status: evt.status || 'publie',
-            distanceKm: evt.distanceKm ?? evt.distance_km ?? 0,
-        }));
+        return rawEvents.map((evt: any) => {
+            let position = { latitude: 36.8065, longitude: 10.1815 };
+            if (evt.position && typeof evt.position === 'object') {
+                if ('latitude' in evt.position && 'longitude' in evt.position) {
+                    position = { latitude: Number(evt.position.latitude), longitude: Number(evt.position.longitude) };
+                } else if (Array.isArray(evt.position.coordinates) && evt.position.coordinates.length >= 2) {
+                    position = {
+                        longitude: Number(evt.position.coordinates[0]),
+                        latitude: Number(evt.position.coordinates[1]),
+                    };
+                }
+            }
+
+            return {
+                id: evt.id,
+                organizerId: evt.organizerId || evt.organizer_id,
+                title: evt.title,
+                placeName: evt.placeName || evt.place_name || 'Lieu non spécifié',
+                address: evt.address || '',
+                position,
+                eventDate: evt.eventDate || evt.event_date,
+                slots: Array.isArray(evt.slots)
+                    ? evt.slots.map((s: any) =>
+                        typeof s === 'string' ? { time: s, capacity: evt.capacity || 20 } : s
+                    )
+                    : [],
+                capacity: evt.capacity || 40,
+                registeredCount: evt.registeredCount ?? evt.registered_count ?? 0,
+                targetGroups: evt.targetGroups || evt.target_groups || [],
+                conditions: evt.conditions || '',
+                status: evt.status || 'publie',
+                distanceKm: evt.distanceKm ?? evt.distance_km ?? 0,
+            };
+        });
     } catch (error: any) {
         console.error('Erreur chargement événements:', error.message);
         throw error;
@@ -274,27 +299,30 @@ export const getUserNotifications = async (token: string): Promise<ApiNotificati
     }
 };
 
-export interface UrgentRequestItem {
-    id: string;
-    institutionId?: string;
-    institutionName: string;
-    bloodGroup: string;
-    quantity: number;
-    urgency: string;
-    status: string;
-    currentRadiusKm?: number;
-    createdAt?: string;
-}
-
+// 🩸 LECTURE STRICTE DE LA TABLE blood_requests (GET /requests?status=active)
 export const getActiveUrgentRequests = async (token: string): Promise<UrgentRequestItem[]> => {
     try {
         const response = await axios.get(`${API_BASE_URL}/requests`, {
             headers: { Authorization: `Bearer ${token}` },
             params: { status: 'active' },
         });
-        return Array.isArray(response.data) ? response.data : [];
+        const rawRequests = Array.isArray(response.data) ? response.data : [];
+
+        return rawRequests.map((req: any) => ({
+            id: req.id,
+            institutionId: req.institutionId || req.institution_id,
+            institutionName: req.institutionName || req.institution_name || 'Hôpital / Établissement de santé',
+            bloodGroup: req.bloodGroup || req.blood_group || 'O+',
+            quantity: Number(req.quantity) || 1,
+            urgency: req.urgency || 'urgente',
+            status: req.status || 'active',
+            currentRadiusKm: req.currentRadiusKm ?? req.current_radius_km ?? 10,
+            maxRadiusKm: req.maxRadiusKm ?? req.max_radius_km ?? 50,
+            deadline: req.deadline,
+            createdAt: req.createdAt || req.created_at,
+        }));
     } catch (error: any) {
-        console.log('Erreur /requests:', error?.message);
+        console.log('Erreur GET /requests:', error?.message);
         return [];
     }
 };
