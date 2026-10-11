@@ -1478,6 +1478,77 @@
         ]
       }
     },
+    "/requests/{id}/waves/launch": {
+      "post": {
+        "description": "Réservé à l'hôpital propriétaire d'une demande active d'urgence critique. Sinon les vagues partent automatiquement à l'échéance du délai.",
+        "operationId": "RequestsController_launchWave",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "b2c3d4e5-0001-4bbb-9ccc-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Demande inactive, urgence insuffisante ou aucune vague possible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lancer manuellement la vague suivante",
+        "tags": [
+          "requests"
+        ],
+        "x-roles": [
+          "hopital"
+        ]
+      }
+    },
     "/requests/{id}/respond": {
       "post": {
         "description": "Contrôle serveur : demande encore active, donneur compatible et éligible, délai entre dons écoulé (3ᵉ niveau de F2.4). Une seule réponse par donneur et par demande.",
@@ -1617,7 +1688,7 @@
     },
     "/events": {
       "get": {
-        "description": "Liste filtrable par gouvernorat, date et distance (F4.2).",
+        "description": "Liste filtrable par gouvernorat, date et rayon (F4.2). Pour un donneur : distanceKm (PostGIS), seatsLeft, tri par distance, null en dernier.",
         "operationId": "EventsController_list",
         "parameters": [
           {
@@ -1678,6 +1749,36 @@
             "schema": {
               "example": 25,
               "type": "number"
+            }
+          },
+          {
+            "name": "radiusKm",
+            "required": false,
+            "in": "query",
+            "description": "Rayon en km autour du donneur connecté (défaut : son rayon maximal, plafonné à 100)",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Alias de dateFrom (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-10-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Alias de dateTo (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-10-31",
+              "type": "string"
             }
           }
         ],
@@ -1863,11 +1964,83 @@
           "direction",
           "admin"
         ]
+      },
+      "delete": {
+        "description": "Réservée à l'organisateur. La collecte passe en statut « annule » et disparaît du calendrier.",
+        "operationId": "EventsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "c3d4e5f6-0001-4ccc-8ddd-000000000001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Collecte supprimée"
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Vous n'êtes pas l'organisateur\n\nRôle insuffisant. Rôles autorisés : crt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "L'événement n'est plus ouvert",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Supprimer une collecte",
+        "tags": [
+          "events"
+        ],
+        "x-roles": [
+          "crt"
+        ]
       }
     },
     "/events/{id}/register": {
       "post": {
-        "description": "Refusée (422) si le donneur n'est pas éligible à la date de l'événement (règle R5, délai entre dons) ou (409) si la capacité est atteinte.",
+        "description": "Refusée (409) si le donneur n'est pas éligible à la date de l'événement (règle R5, délai entre dons) ou si la capacité est atteinte ; (422) si son statut d'éligibilité global ne permet pas de donner.",
         "operationId": "EventsController_register",
         "parameters": [
           {
@@ -1922,7 +2095,7 @@
             }
           },
           "409": {
-            "description": "Capacité atteinte ou déjà inscrit",
+            "description": "Capacité atteinte, déjà inscrit, ou non éligible à la date de l'événement (R5)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1932,7 +2105,7 @@
             }
           },
           "422": {
-            "description": "Donneur non éligible à la date de l'événement",
+            "description": "Statut d'éligibilité global : le donneur ne peut pas donner",
             "content": {
               "application/json": {
                 "schema": {
@@ -2162,6 +2335,135 @@
           "hopital",
           "direction",
           "admin"
+        ]
+      },
+      "post": {
+        "description": "Ajoute la quantité au stock actuel du groupe (la ligne est créée si absente). Le seuil est mis à jour si fourni.",
+        "operationId": "StocksController_add",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionStockDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajouter des poches au stock de son établissement",
+        "tags": [
+          "stocks"
+        ],
+        "x-roles": [
+          "hopital"
+        ]
+      }
+    },
+    "/stocks/{bloodGroup}": {
+      "patch": {
+        "description": "Applique delta au stock actuel du groupe. 400 si delta vaut 0 ou si le stock final serait négatif.",
+        "operationId": "StocksController_adjust",
+        "parameters": [
+          {
+            "name": "bloodGroup",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BloodGroup"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionStockDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token absent, invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rôle insuffisant. Rôles autorisés : hopital",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ajuster le stock d'un groupe (+ ou -)",
+        "tags": [
+          "stocks"
+        ],
+        "x-roles": [
+          "hopital"
         ]
       }
     }
@@ -3682,8 +3984,19 @@
           },
           "distanceKm": {
             "type": "number",
+            "nullable": true,
             "example": 4.8,
-            "description": "Distance au point de référence, si lat et lng sont fournis"
+            "description": "Distance donneur → lieu en km (0,1 près), null si une des deux positions est inconnue"
+          },
+          "seatsLeft": {
+            "type": "number",
+            "example": 48,
+            "description": "Places restantes : capacité moins inscriptions (statuts inscrit et présent)"
+          },
+          "eligibleOnEventDate": {
+            "type": "boolean",
+            "example": true,
+            "description": "Donneur éligible À LA DATE de l'événement (règle R5). Absent pour les rôles non donneurs."
           }
         },
         "required": [
@@ -3695,7 +4008,9 @@
           "slots",
           "capacity",
           "registeredCount",
-          "status"
+          "status",
+          "distanceKm",
+          "seatsLeft"
         ]
       },
       "CreateEventDto": {
@@ -3999,6 +4314,45 @@
           "institutionName",
           "position",
           "stocks"
+        ]
+      },
+      "AddStockDto": {
+        "type": "object",
+        "properties": {
+          "bloodGroup": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BloodGroup"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "example": 12,
+            "description": "Poches à ajouter au stock actuel (1 à 500)"
+          },
+          "alertThreshold": {
+            "type": "number",
+            "example": 15,
+            "description": "Nouveau seuil d'alerte (facultatif)"
+          }
+        },
+        "required": [
+          "bloodGroup",
+          "quantity"
+        ]
+      },
+      "AdjustStockDto": {
+        "type": "object",
+        "properties": {
+          "delta": {
+            "type": "number",
+            "example": -3,
+            "description": "Variation du stock : positive pour ajouter, négative pour retirer (-500 à 500, hors 0)"
+          }
+        },
+        "required": [
+          "delta"
         ]
       },
       "WsGaugeEventDto": {
