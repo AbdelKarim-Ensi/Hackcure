@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 import CurrentRequest from './CurrentRequest'
 import StockIcon from './StockIcon'
+import CrtAbout from './components/CrtAbout'
 import { PROFILES, useProfile } from './profiles'
-import { events0, type EventItem } from './data'
+// AJOUT : on n'utilise plus events0 (démo) mais les vraies collectes (avant : import { events0, type EventItem } from './data')
+import { type EventItem } from './data'
+import { useEvents } from './events' // AJOUT : collectes réelles (GET /events)
 import { show } from './requests'
 import { bySeverity, LEVELS, useStocks, type Stock } from './stocks'
 
@@ -74,9 +77,13 @@ export function Home() {
   const collect = profile === 'centre_transfusion' || profile === 'croissant_rouge'
   const wantsStocks = profile === 'hopital' || profile === 'banque_sang'
   const { list, error } = useStocks()
+  const { list: eventsList, error: eventsError } = useEvents() // AJOUT : collectes réelles pour l'accueil CRT
   const stocks = wantsStocks ? list : []
   const watch = (stocks ?? []).filter((s) => s.level !== 'vert').sort(bySeverity).slice(0, 4)
   const below = (stocks ?? []).filter((s) => s.level === 'rouge').length
+  // AJOUT : prochaines collectes = à partir d'aujourd'hui, triées par date
+  const today = new Date().toISOString().slice(0, 10)
+  const upcoming = (eventsList ?? []).filter((e) => e.date.slice(0, 10) >= today).sort((a, b) => a.date.localeCompare(b.date))
 
   return (
     <div className="space-y-8">
@@ -84,6 +91,8 @@ export function Home() {
         <h1 className="font-display text-3xl font-bold">{orgName ?? p.org}</h1>
         <p className="text-muted">{p.tagline}</p>
       </div>
+
+      {collect && <CrtAbout />}
 
       {profile === 'hopital' && (
         <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
@@ -117,9 +126,14 @@ export function Home() {
               Annoncer une collecte
             </Link>
           </div>
-          <ul className="space-y-3">{events0.map((e) => <EventRow key={e.id} e={e} />)}</ul>
+          {/* AJOUT : données réelles (avant : <ul className="space-y-3">{events0.map((e) => <EventRow key={e.id} e={e} />)}</ul>) */}
+          {eventsList === null && <p className="text-muted">Chargement…</p>}
+          {eventsError && <p role="alert" className="text-primary-dark">Impossible de charger les collectes.</p>}
+          {eventsList && !eventsError && upcoming.length === 0 && <p className="text-muted">Aucune collecte à venir.</p>}
+          <ul className="space-y-3">{upcoming.slice(0, 5).map((e) => <EventRow key={e.id} e={e} />)}</ul>
           {profile === 'croissant_rouge' && (
-            <p className="mt-4 text-muted">{events0.reduce((n, e) => n + e.filled, 0)} volontaires déjà inscrits.</p>
+            // AJOUT : total calculé sur les vraies collectes (avant : events0.reduce(...))
+            <p className="mt-4 text-muted">{(eventsList ?? []).reduce((n, e) => n + e.filled, 0)} volontaires déjà inscrits.</p>
           )}
         </section>
       )}
@@ -140,4 +154,3 @@ export function Stocks() {
     </section>
   )
 }
-

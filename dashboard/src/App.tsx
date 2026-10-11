@@ -1,17 +1,18 @@
 import { Component, useState, type ErrorInfo, type ReactNode } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom' // AJOUT : Navigate pour la redirection
 import Admin from './Admin'
 import { AuthProvider } from './auth'
 import { useAuth } from './authContext'
 import { Declare, NotForWeb, Pending, Rejected } from './Gate'
 import Login from './Login'
-import { ProfileCtx, profileFor, type ProfileKey } from './profiles'
+import { ProfileCtx, profileFor, useProfile, type ProfileKey } from './profiles' // AJOUT : useProfile
 import Shell from './Shell'
 import NewRequest from './NewRequest'
 import StockEdit from './StockEdit'
 import { Home, Stocks } from './pages'
 import { Events } from './EventsPage'
 import { Requests } from './RequestsPage'
+import ProfilePage from './ProfilePage' // AJOUT : page de profil de l'hôpital
 
 // Filet de sécurité : affiche l'erreur à l'écran au lieu d'une page blanche.
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -31,6 +32,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
+// AJOUT : garde de route - les stocks sont réservés aux hôpitaux et aux banques de sang
+function StocksOnly({ children }: { children: ReactNode }) {
+  const { profile } = useProfile()
+  if (profile === 'hopital' || profile === 'banque_sang') return <>{children}</>
+  return <Navigate to="/" replace />
+}
+
 function Dashboard({ first, orgName }: { first: ProfileKey; orgName: string }) {
   const [profile, setProfile] = useState<ProfileKey>(first)
   return (
@@ -41,9 +49,11 @@ function Dashboard({ first, orgName }: { first: ProfileKey; orgName: string }) {
             <Route index element={<Home />} />
             <Route path="demandes" element={<Requests />} />
             <Route path="demandes/nouvelle" element={<NewRequest />} />
-            <Route path="stocks" element={<Stocks />} />
-            <Route path="stocks/:group" element={<StockEdit />} />
+            {/* AJOUT : routes stocks protégées (avant : <Route path="stocks" element={<Stocks />} /> et <Route path="stocks/:group" element={<StockEdit />} />) */}
+            <Route path="stocks" element={<StocksOnly><Stocks /></StocksOnly>} />
+            <Route path="stocks/:group" element={<StocksOnly><StockEdit /></StocksOnly>} />
             <Route path="collectes" element={<Events />} />
+            <Route path="profil" element={<ProfilePage />} /> {/* AJOUT : route /profil */}
           </Route>
         </Routes>
       </BrowserRouter>

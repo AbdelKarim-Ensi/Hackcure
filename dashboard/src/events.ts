@@ -38,6 +38,16 @@ export async function createEvent(d: NewEvent): Promise<EventItem> {
   }))
 }
 
+// AJOUT : suppression manuelle d'une collecte (DELETE /events/:id, réservée à l'organisateur)
+export async function deleteEvent(id: string): Promise<void> {
+  if (USE_MOCK) {
+    const i = mock.findIndex((e) => e.id === id)
+    if (i >= 0) mock.splice(i, 1)
+    return
+  }
+  await api<void>(`/events/${id}`, { method: 'DELETE' })
+}
+
 export function useEvents() {
   const [list, setList] = useState<EventItem[] | null>(null)
   const [error, setError] = useState(false)

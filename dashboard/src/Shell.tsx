@@ -38,6 +38,9 @@ export default function Shell() {
         }`}
       >
         <div className="mb-6">
+          {(profile === 'centre_transfusion' || profile === 'croissant_rouge') && (
+            <img src="/crt-logo.jpeg" alt="Logo du Croissant-Rouge Tunisien" className="mb-3 h-14 w-14 rounded-lg object-contain" />
+          )}
           <p className="text-xs uppercase tracking-wide text-muted">{p.label}</p>
           <p className="text-lg font-bold">{displayName}</p>
           <p className="mt-1 text-sm text-muted">{p.tagline}</p>

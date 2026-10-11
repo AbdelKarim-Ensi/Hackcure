@@ -11,6 +11,8 @@ import { AuditModule } from './audit/audit.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { HttpThrottlerGuard } from './common/guards/http-throttler.guard';
+// AJOUT : active les @Cron (nettoyage des collectes)
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { HttpThrottlerGuard } from './common/guards/http-throttler.guard';
     ApiContractModule,
 
     TypeOrmModule.forRoot(dataSourceOptions),
+    // AJOUT : planificateur de tâches (cron)
+    ScheduleModule.forRoot(),
     // AJOUT : T7.2
     AuditModule,
     // AJOUT : T7.3 quota global (par défaut 100 req/min/IP), coupé si THROTTLE_DISABLED=true
