@@ -3,6 +3,7 @@
 // AJOUT : T6.3 - notifications d'événements et rappels différés (BullMQ).
 // AJOUT : T6.4 - pointage (EventCheckinService) branché sur DonationsService.
 // AJOUT : T6.5 - EventDashboardService (agrégats réels du tableau de bord).
+// AJOUT : cron de nettoyage des collectes non remplies (EventsCleanupService).
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CrtEvent, EventRegistration } from '../database/entities/events.entities';
@@ -13,6 +14,7 @@ import { EventRemindersProcessor } from './event-reminders.processor';
 import { EventRemindersQueue } from './event-reminders.queue';
 import { EventCheckinService } from './events-checkin.service';
 import { EventDashboardService } from './events-dashboard.service';
+import { EventsCleanupService } from './events-cleanup.service'; // AJOUT : cron de nettoyage
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import { QrTokenService } from './qr-token.service';
@@ -28,6 +30,7 @@ import { QrTokenService } from './qr-token.service';
     EventRemindersProcessor,
     EventCheckinService,
     EventDashboardService,
+    EventsCleanupService, // AJOUT : cron de nettoyage
   ],
   exports: [EventsService, QrTokenService, EventNotifier],
 })
