@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import CurrentRequest from './CurrentRequest'
 import StockIcon from './StockIcon'
+import CrtAbout from './components/CrtAbout'
 import { PROFILES, useProfile } from './profiles'
 // AJOUT : on n'utilise plus events0 (démo) mais les vraies collectes (avant : import { events0, type EventItem } from './data')
 import { type EventItem } from './data'
@@ -90,6 +91,8 @@ export function Home() {
         <h1 className="font-display text-3xl font-bold">{orgName ?? p.org}</h1>
         <p className="text-muted">{p.tagline}</p>
       </div>
+
+      {collect && <CrtAbout />}
 
       {profile === 'hopital' && (
         <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
