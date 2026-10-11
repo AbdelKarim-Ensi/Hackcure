@@ -11,6 +11,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { NotificationsScreen } from './src/screens/NotificationScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { ChatScreen } from './src/screens/ChatScreen';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   History: undefined;
   Notifications: undefined;
   Profile: undefined;
+  Assistant: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -42,6 +44,8 @@ export default function App(): React.JSX.Element {
           <Stack.Screen name="History" component={HistoryScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Assistant" component={ChatScreen} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
