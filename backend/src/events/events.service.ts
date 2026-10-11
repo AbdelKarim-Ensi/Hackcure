@@ -4,6 +4,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException, // AJOUT : suppression réservée à l'organisateur
   Injectable,
   Logger,
   NotFoundException,
@@ -25,8 +26,17 @@ import {
 } from './dto/events.dto';
 import { EventNotifier } from './event-notifier.service';
 import { QrTokenService } from './qr-token.service';
+import { canDonateOn, iso, nextDonationDate, toRulesSex } from '../rules';
 
 type SlotDef = { time: string; capacity?: number };
+
+type EligibilityDonor = Pick<Donor, 'lastDonationDate' | 'sex' | 'nextDonationPossibleDate'>;
+
+/** R5 : le donneur peut-il donner À LA DATE DE L'ÉVÉNEMENT ? Règle unique (module rules), réutilisée par la liste et l'inscription. */
+export function eligibleOn(donor: EligibilityDonor, eventDate: string): boolean {
+  if (donor.nextDonationPossibleDate && donor.nextDonationPossibleDate > eventDate) return false;
+  return canDonateOn(donor.lastDonationDate, eventDate, 'whole_blood', toRulesSex(donor.sex));
+}
 
 @Injectable()
 export class EventsService {
@@ -40,20 +50,29 @@ export class EventsService {
     private readonly notifier: EventNotifier,
   ) {}
 
-  /** Requête de base : lit aussi lat/lng de la position, et la distance si lat/lng sont fournis. */
-  private baseQuery(q?: ListEventsQueryDto): SelectQueryBuilder<CrtEvent> {
+  /** Requête de base : lit lat/lng de la position, et la distance (calculée par PostGIS) si un point de référence existe. */
+  private baseQuery(ref: string | null = null, params: Record<string, unknown> = {}): SelectQueryBuilder<CrtEvent> {
     const qb = this.events
       .createQueryBuilder('e')
       .addSelect('ST_Y(e.position::geometry)', 'lat')
       .addSelect('ST_X(e.position::geometry)', 'lng');
-
-    if (q?.lat != null && q?.lng != null) {
-      qb.addSelect(
-        'ST_Distance(e.position, ST_SetSRID(ST_MakePoint(:refLng, :refLat), 4326)::geography) / 1000',
-        'dist',
-      ).setParameters({ refLng: q.lng, refLat: q.lat });
-    }
+    if (ref) qb.addSelect(`ST_Distance(e.position, ${ref}) / 1000.0`, 'dist').setParameters(params);
     return qb;
+  }
+
+  /** Point de référence en SQL : position du donneur (lue en base, jamais exposée), sinon lat/lng fournis. */
+  private refPoint(donorId: string | null, q: ListEventsQueryDto): { ref: string | null; params: Record<string, unknown> } {
+    if (donorId) {
+      // SQL brut : le query builder enveloppe les colonnes geography dans ST_AsGeoJSON (type json), incompatible avec ST_Distance.
+      return { ref: '(SELECT dn.position FROM donors dn WHERE dn.user_id = :donorId)', params: { donorId } };
+    }
+    if (q.lat != null && q.lng != null) {
+      return {
+        ref: 'ST_SetSRID(ST_MakePoint(:refLng, :refLat), 4326)::geography',
+        params: { refLng: q.lng, refLat: q.lat },
+      };
+    }
+    return { ref: null, params: {} };
   }
 
   private async registeredCounts(ids: string[]): Promise<Map<string, number>> {
@@ -64,7 +83,7 @@ export class EventsService {
       .select('r.eventId', 'eventId')
       .addSelect('COUNT(*)', 'n')
       .where('r.eventId IN (:...ids)', { ids })
-      .andWhere('r.status = :s', { s: RegistrationStatus.Inscrit })
+      .andWhere('r.status IN (:...s)', { s: [RegistrationStatus.Inscrit, RegistrationStatus.Present] })
       .groupBy('r.eventId')
       .getRawMany<{ eventId: string; n: string }>();
     rows.forEach((r) => map.set(r.eventId, Number(r.n)));
@@ -89,28 +108,59 @@ export class EventsService {
       targetGroups: (e.targetGroups ?? undefined) as EventDto['targetGroups'],
       conditions: e.conditions ?? undefined,
       status: e.status as unknown as EventStatus,
-      distanceKm: raw.dist != null ? Math.round(Number(raw.dist) * 10) / 10 : undefined,
+      distanceKm: raw.dist != null ? Math.round(Number(raw.dist) * 10) / 10 : null,
+      seatsLeft: Math.max(0, e.capacity - registered),
     };
   }
 
-  async list(q: ListEventsQueryDto): Promise<EventDto[]> {
-    const qb = this.baseQuery(q).where('e.status = :st', { st: DbEventStatus.Publie });
+  async list(q: ListEventsQueryDto, user?: AuthenticatedUser): Promise<EventDto[]> {
+    // Donneur connecté : on ne lit que son id et son rayon, jamais sa position (elle reste dans le SQL).
+    const donor = user
+      ? await this.dataSource
+          .getRepository(Donor)
+          .findOne({
+            where: { userId: user.id },
+            select: { userId: true, maxRadiusKm: true, lastDonationDate: true, sex: true, nextDonationPossibleDate: true },
+          })
+      : null;
+    const { ref, params } = this.refPoint(donor?.userId ?? null, q);
+    const qb = this.baseQuery(ref, params).where('e.status = :st', { st: DbEventStatus.Publie });
 
     if (q.governorate) {
       qb.andWhere('(e.placeName ILIKE :g OR e.address ILIKE :g)', { g: `%${q.governorate}%` });
     }
-    if (q.dateFrom) qb.andWhere('e.eventDate >= :dateFrom', { dateFrom: q.dateFrom });
-    if (q.dateTo) qb.andWhere('e.eventDate <= :dateTo', { dateTo: q.dateTo });
-    if (q.lat != null && q.lng != null && q.maxDistanceKm) {
-      qb.andWhere(
-        'ST_DWithin(e.position, ST_SetSRID(ST_MakePoint(:refLng, :refLat), 4326)::geography, :maxM)',
-        { maxM: q.maxDistanceKm * 1000 },
-      );
+    const dateFrom = q.from ?? q.dateFrom;
+    const dateTo = q.to ?? q.dateTo;
+    if (dateFrom) qb.andWhere('e.eventDate >= :dateFrom', { dateFrom });
+    if (dateTo) qb.andWhere('e.eventDate <= :dateTo', { dateTo });
+    if (donor) qb.andWhere('e.eventDate >= CURRENT_DATE');
+
+    // Rayon : radiusKm, sinon rayon du donneur (ou maxDistanceKm pour un point lat/lng), plafonné à 100 km.
+    // Position inconnue (donneur ou événement) : l'événement reste dans la liste.
+    const asked = q.radiusKm ?? (donor ? donor.maxRadiusKm : q.maxDistanceKm);
+    if (ref && asked) {
+      qb.andWhere(`(${ref} IS NULL OR e.position IS NULL OR ST_DWithin(e.position, ${ref}, :radiusM))`, {
+        radiusM: Math.min(asked, 100) * 1000,
+      });
     }
 
     const { entities, raw } = await qb.orderBy('e.eventDate', 'ASC').getRawAndEntities();
     const counts = await this.registeredCounts(entities.map((e) => e.id));
-    return entities.map((e, i) => this.toDto(e, raw[i], counts.get(e.id) ?? 0));
+    const list = entities.map((e, i) => {
+      const dto = this.toDto(e, raw[i], counts.get(e.id) ?? 0);
+      if (donor) dto.eligibleOnEventDate = eligibleOn(donor, e.eventDate);
+      return dto;
+    });
+    if (ref) {
+      // Distance croissante, null en dernier, puis date (tri seulement : la distance vient de PostGIS).
+      list.sort(
+        (a, b) =>
+          (a.distanceKm == null ? 1 : 0) - (b.distanceKm == null ? 1 : 0) ||
+          (a.distanceKm ?? 0) - (b.distanceKm ?? 0) ||
+          a.eventDate.localeCompare(b.eventDate),
+      );
+    }
+    return list;
   }
 
   async getOne(id: string): Promise<EventDto> {
@@ -157,6 +207,16 @@ export class EventsService {
     return this.getOne(saved.id);
   }
 
+  /** AJOUT : suppression manuelle par l'organisateur (douce : statut « annule », historique conservé). */
+  async cancel(id: string, user: AuthenticatedUser): Promise<void> {
+    const event = await this.events.findOne({ where: { id } });
+    if (!event) throw new NotFoundException('Événement introuvable');
+    if (event.organizerId !== user.id) throw new ForbiddenException("Vous n'êtes pas l'organisateur de cet événement");
+    if (event.status !== DbEventStatus.Publie) throw new ConflictException("Cet événement n'est plus ouvert");
+    await this.events.update({ id }, { status: DbEventStatus.Annule });
+    this.logger.log(`Collecte ${id} annulée par son organisateur.`);
+  }
+
   /** T6.2 + T6.3 : inscription, puis planification des rappels J-1 / H-2 une fois la transaction validée. */
   async register(eventId: string, dto: RegisterEventDto, user: AuthenticatedUser): Promise<EventRegistrationDto> {
     const result = await this.registerTx(eventId, dto, user);
@@ -189,10 +249,10 @@ export class EventsService {
       if (donor.eligibilityStatus !== EligibilityStatus.Eligible) {
         throw new UnprocessableEntityException("Vous n'êtes pas éligible au don");
       }
-      if (donor.nextDonationPossibleDate && donor.nextDonationPossibleDate > event.eventDate) {
-        throw new UnprocessableEntityException(
-          `Non éligible à la date de l'événement : prochain don possible le ${donor.nextDonationPossibleDate}`,
-        );
+      if (!eligibleOn(donor, event.eventDate)) {
+        const byRule = nextDonationDate(donor.lastDonationDate, 'whole_blood', toRulesSex(donor.sex));
+        const next = [donor.nextDonationPossibleDate, byRule ? iso(byRule) : null].filter(Boolean).sort().pop();
+        throw new ConflictException(`Non éligible à la date de l'événement : prochain don possible le ${next}`);
       }
 
       const existing = await m.findOne(EventRegistration, { where: { eventId, donorId: donor.userId } });

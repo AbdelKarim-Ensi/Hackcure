@@ -115,6 +115,22 @@ export class ListEventsQueryDto {
   @Type(() => Number)
   @IsNumber()
   maxDistanceKm?: number;
+
+  @ApiPropertyOptional({ example: 20, description: 'Rayon en km autour du donneur connecté (défaut : son rayon maximal, plafonné à 100)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  radiusKm?: number;
+
+  @ApiPropertyOptional({ example: '2026-10-01', description: 'Alias de dateFrom (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  @ApiPropertyOptional({ example: '2026-10-31', description: 'Alias de dateTo (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsDateString()
+  to?: string;
 }
 
 export class EventDto {
@@ -157,8 +173,22 @@ export class EventDto {
   @ApiProperty({ enum: EventStatus, enumName: 'EventStatus' })
   status!: EventStatus;
 
-  @ApiPropertyOptional({ example: 4.8, description: 'Distance au point de référence, si lat et lng sont fournis' })
-  distanceKm?: number;
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    example: 4.8,
+    description: 'Distance donneur → lieu en km (0,1 près), null si une des deux positions est inconnue',
+  })
+  distanceKm!: number | null;
+
+  @ApiProperty({ example: 48, description: 'Places restantes : capacité moins inscriptions (statuts inscrit et présent)' })
+  seatsLeft!: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: "Donneur éligible À LA DATE de l'événement (règle R5). Absent pour les rôles non donneurs.",
+  })
+  eligibleOnEventDate?: boolean;
 }
 
 export class RegisterEventDto {

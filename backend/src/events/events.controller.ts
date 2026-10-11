@@ -3,10 +3,13 @@
 // AJOUT : T6.2 - register branché sur EventsService.register.
 // AJOUT : T6.4 - checkin branché sur EventCheckinService.
 // AJOUT : T6.5 - dashboard branché sur EventDashboardService (plus de mock).
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+// AJOUT : suppression manuelle d'une collecte par son organisateur (DELETE /events/:id).
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -47,11 +50,12 @@ export class EventsController {
   @ApiRoles(UserRole.DONNEUR, UserRole.CRT, UserRole.DIRECTION, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Calendrier des événements',
-    description: 'Liste filtrable par gouvernorat, date et distance (F4.2).',
+    description:
+      'Liste filtrable par gouvernorat, date et rayon (F4.2). Pour un donneur : distanceKm (PostGIS), seatsLeft, tri par distance, null en dernier.',
   })
   @ApiOkResponse({ type: [EventDto] })
-  list(@Query() query: ListEventsQueryDto): Promise<EventDto[]> {
-    return this.events.list(query);
+  list(@Query() query: ListEventsQueryDto, @CurrentUser() user: AuthenticatedUser): Promise<EventDto[]> {
+    return this.events.list(query, user);
   }
 
   @Post()
@@ -76,20 +80,40 @@ export class EventsController {
     return this.events.getOne(id);
   }
 
+  // AJOUT : suppression manuelle (douce : statut « annule »), réservée à l'organisateur
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiRoles(UserRole.CRT)
+  @ApiOperation({
+    summary: 'Supprimer une collecte',
+    description: "Réservée à l'organisateur. La collecte passe en statut « annule » et disparaît du calendrier.",
+  })
+  @ApiParam({ name: 'id', example: MOCK_IDS.event })
+  @ApiNoContentResponse({ description: 'Collecte supprimée' })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: "Vous n'êtes pas l'organisateur" })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({ type: ErrorResponseDto, description: "L'événement n'est plus ouvert" })
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser): Promise<void> {
+    return this.events.cancel(id, user);
+  }
+
   @Post(':id/register')
   @ApiRoles(UserRole.DONNEUR)
   @ApiOperation({
     summary: 'S\'inscrire à un créneau',
     description:
-      "Refusée (422) si le donneur n'est pas éligible à la date de l'événement (règle R5, délai entre dons) ou (409) si la capacité est atteinte.",
+      "Refusée (409) si le donneur n'est pas éligible à la date de l'événement (règle R5, délai entre dons) ou si la capacité est atteinte ; (422) si son statut d'éligibilité global ne permet pas de donner.",
   })
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiCreatedResponse({ type: EventRegistrationDto })
   @ApiUnprocessableEntityResponse({
     type: ErrorResponseDto,
-    description: "Donneur non éligible à la date de l'événement",
+    description: "Statut d'éligibilité global : le donneur ne peut pas donner",
   })
-  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Capacité atteinte ou déjà inscrit' })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: "Capacité atteinte, déjà inscrit, ou non éligible à la date de l'événement (R5)",
+  })
   register(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RegisterEventDto,
