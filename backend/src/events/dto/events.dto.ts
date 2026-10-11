@@ -183,6 +183,12 @@ export class EventDto {
 
   @ApiProperty({ example: 48, description: 'Places restantes : capacité moins inscriptions (statuts inscrit et présent)' })
   seatsLeft!: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: "Donneur éligible À LA DATE de l'événement (règle R5). Absent pour les rôles non donneurs.",
+  })
+  eligibleOnEventDate?: boolean;
 }
 
 export class RegisterEventDto {

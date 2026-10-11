@@ -102,15 +102,18 @@ export class EventsController {
   @ApiOperation({
     summary: 'S\'inscrire à un créneau',
     description:
-      "Refusée (422) si le donneur n'est pas éligible à la date de l'événement (règle R5, délai entre dons) ou (409) si la capacité est atteinte.",
+      "Refusée (409) si le donneur n'est pas éligible à la date de l'événement (règle R5, délai entre dons) ou si la capacité est atteinte ; (422) si son statut d'éligibilité global ne permet pas de donner.",
   })
   @ApiParam({ name: 'id', example: MOCK_IDS.event })
   @ApiCreatedResponse({ type: EventRegistrationDto })
   @ApiUnprocessableEntityResponse({
     type: ErrorResponseDto,
-    description: "Donneur non éligible à la date de l'événement",
+    description: "Statut d'éligibilité global : le donneur ne peut pas donner",
   })
-  @ApiConflictResponse({ type: ErrorResponseDto, description: 'Capacité atteinte ou déjà inscrit' })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: "Capacité atteinte, déjà inscrit, ou non éligible à la date de l'événement (R5)",
+  })
   register(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RegisterEventDto,

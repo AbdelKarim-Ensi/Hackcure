@@ -26,8 +26,17 @@ import {
 } from './dto/events.dto';
 import { EventNotifier } from './event-notifier.service';
 import { QrTokenService } from './qr-token.service';
+import { canDonateOn, iso, nextDonationDate, toRulesSex } from '../rules';
 
 type SlotDef = { time: string; capacity?: number };
+
+type EligibilityDonor = Pick<Donor, 'lastDonationDate' | 'sex' | 'nextDonationPossibleDate'>;
+
+/** R5 : le donneur peut-il donner À LA DATE DE L'ÉVÉNEMENT ? Règle unique (module rules), réutilisée par la liste et l'inscription. */
+function eligibleOn(donor: EligibilityDonor, eventDate: string): boolean {
+  if (donor.nextDonationPossibleDate && donor.nextDonationPossibleDate > eventDate) return false;
+  return canDonateOn(donor.lastDonationDate, eventDate, 'whole_blood', toRulesSex(donor.sex));
+}
 
 @Injectable()
 export class EventsService {
@@ -114,7 +123,10 @@ export class EventsService {
     const donor = user
       ? await this.dataSource
           .getRepository(Donor)
-          .findOne({ where: { userId: user.id }, select: { userId: true, maxRadiusKm: true } })
+          .findOne({
+            where: { userId: user.id },
+            select: { userId: true, maxRadiusKm: true, lastDonationDate: true, sex: true, nextDonationPossibleDate: true },
+          })
       : null;
     const { ref, params } = this.refPoint(donor?.userId ?? null, q);
     const qb = this.baseQuery(ref, params).where('e.status = :st', { st: DbEventStatus.Publie });
@@ -139,7 +151,11 @@ export class EventsService {
 
     const { entities, raw } = await qb.orderBy('e.eventDate', 'ASC').getRawAndEntities();
     const counts = await this.registeredCounts(entities.map((e) => e.id));
-    const list = entities.map((e, i) => this.toDto(e, raw[i], counts.get(e.id) ?? 0));
+    const list = entities.map((e, i) => {
+      const dto = this.toDto(e, raw[i], counts.get(e.id) ?? 0);
+      if (donor) dto.eligibleOnEventDate = eligibleOn(donor, e.eventDate);
+      return dto;
+    });
     if (ref) {
       // Distance croissante, null en dernier, puis date (tri seulement : la distance vient de PostGIS).
       list.sort(
@@ -238,10 +254,10 @@ export class EventsService {
       if (donor.eligibilityStatus !== EligibilityStatus.Eligible) {
         throw new UnprocessableEntityException("Vous n'êtes pas éligible au don");
       }
-      if (donor.nextDonationPossibleDate && donor.nextDonationPossibleDate > event.eventDate) {
-        throw new UnprocessableEntityException(
-          `Non éligible à la date de l'événement : prochain don possible le ${donor.nextDonationPossibleDate}`,
-        );
+      if (!eligibleOn(donor, event.eventDate)) {
+        const byRule = nextDonationDate(donor.lastDonationDate, 'whole_blood', toRulesSex(donor.sex));
+        const next = [donor.nextDonationPossibleDate, byRule ? iso(byRule) : null].filter(Boolean).sort().pop();
+        throw new ConflictException(`Non éligible à la date de l'événement : prochain don possible le ${next}`);
       }
 
       const existing = await m.findOne(EventRegistration, { where: { eventId, donorId: donor.userId } });
