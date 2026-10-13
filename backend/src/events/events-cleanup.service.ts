@@ -46,4 +46,36 @@ export class EventsCleanupService {
       return 0
     }
   }
+
+  // AJOUT : toutes les heures, une collecte publiée et remplie dont la date est passée devient « termine »
+  @Cron(CronExpression.EVERY_HOUR)
+  async closeFilled(): Promise<number> {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const qb = this.events.createQueryBuilder('e')
+      const filled = qb
+        .subQuery()
+        .select('COUNT(*)')
+        .from(EventRegistration, 'r')
+        .where('r.eventId = e.id')
+        .andWhere('r.status IN (:...active)')
+        .getQuery()
+
+      const rows = await qb
+        .select('e.id', 'id')
+        .where('e.status = :st', { st: DbEventStatus.Publie })
+        .andWhere('e.eventDate < :today', { today })
+        .andWhere(`${filled} >= e.capacity`)
+        .setParameter('active', [RegistrationStatus.Inscrit, RegistrationStatus.Present])
+        .getRawMany<{ id: string }>()
+
+      if (rows.length === 0) return 0
+      await this.events.update({ id: In(rows.map((r) => r.id)) }, { status: DbEventStatus.Termine })
+      this.logger.log(`${rows.length} collecte(s) remplie(s) passée(s) en « terminée ».`)
+      return rows.length
+    } catch (e) {
+      this.logger.error(`Clôture des collectes remplies échouée : ${(e as Error).message}`)
+      return 0
+    }
+  }
 }
