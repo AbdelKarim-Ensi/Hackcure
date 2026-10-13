@@ -17,6 +17,7 @@ import {
     Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { DonorProfile, BloodEvent } from '../types/events';
@@ -37,9 +38,29 @@ export interface UnifiedHomeItem extends BloodEvent {
     institutionName?: string;
 }
 
-// ------------------------------------------------------------------
-// 💓 COMPOSANT ECG ANIMÉ FAÇON MONITEUR DE SANTÉ (BALAYAGE LUMINEUX)
-// ------------------------------------------------------------------
+// 🩸 MATRICE DE COMPATIBILITÉ SANGUINE
+const COMPATIBILITY_MATRIX: Record<string, string[]> = {
+    'O-': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+    'O+': ['O+', 'A+', 'B+', 'AB+'],
+    'A-': ['A-', 'A+', 'AB-', 'AB+'],
+    'A+': ['A+', 'AB+'],
+    'B-': ['B-', 'B+', 'AB-', 'AB+'],
+    'B+': ['B+', 'AB+'],
+    'AB-': ['AB-', 'AB+'],
+    'AB+': ['AB+'],
+};
+
+const isBloodCompatible = (donorGroup?: string | null, targetGroups?: string[] | null): boolean => {
+    if (!targetGroups || targetGroups.length === 0) return true;
+    if (targetGroups.some(g => ['ALL', 'TOUS', 'Tous', 'Tous les groupes'].includes(g))) return true;
+    if (!donorGroup) return false;
+    if (targetGroups.includes(donorGroup)) return true;
+
+    const allowedRecipients = COMPATIBILITY_MATRIX[donorGroup] || [];
+    return targetGroups.some(target => allowedRecipients.includes(target));
+};
+
+// 💓 MONITEUR ECG ANIMÉ
 const ECG_PERIOD = 200;
 const ECG_HEIGHT = 44;
 const SWEEP_WIDTH = 150;
@@ -152,6 +173,7 @@ export const HomeScreen = ({ navigation }: Props) => {
 
             const userRadiusKm = donorData.maxRadiusKm || 20;
 
+            // 📥 Récupération conjointe des collectes + des demandes urgentes de blood_requests
             const [eventsData, urgentRequests] = await Promise.all([
                 getUpcomingEvents(storedToken, {
                     lat: donorData.position?.latitude,
@@ -161,6 +183,7 @@ export const HomeScreen = ({ navigation }: Props) => {
                 getActiveUrgentRequests(storedToken),
             ]);
 
+            // 🚑 MAPPING DES DEMANDES ISSUES DE blood_requests
             const mappedUrgentRequests: UnifiedHomeItem[] = urgentRequests.map((req) => ({
                 id: req.id,
                 requestId: req.id,
@@ -168,22 +191,22 @@ export const HomeScreen = ({ navigation }: Props) => {
                 organizerId: req.institutionId || 'hospital',
                 title: `🚨 APPEL URGENT : ${req.institutionName}`,
                 placeName: req.institutionName,
-                address: `Besoin vital immédiat (Groupe ${req.bloodGroup})`,
+                address: `Besoin vital immédiat (Groupe ${req.bloodGroup} — Quantité: ${req.quantity} poches)`,
                 position: { latitude: 36.8065, longitude: 10.1815 },
-                eventDate: "Aujourd'hui (Immédiat)",
+                eventDate: req.deadline ? new Date(req.deadline).toLocaleDateString('fr-FR') : "Aujourd'hui (Immédiat)",
                 slots: [{ time: 'Immédiat', capacity: req.quantity }],
                 capacity: req.quantity,
                 registeredCount: 0,
                 targetGroups: [req.bloodGroup],
-                conditions: 'Présentation immédiate au centre de transfusion.',
-                status: 'publie',
+                conditions: 'Présentation immédiate au centre de transfusion ou aux urgences.',
+                status: req.status || 'active',
                 distanceKm: req.currentRadiusKm || 2.5,
             }));
 
-            // Déduplication par ID unique
             const seenIds = new Set<string>();
             const combinedList: UnifiedHomeItem[] = [];
 
+            // 1. Ajouter les demandes urgentes de blood_requests
             mappedUrgentRequests.forEach((req) => {
                 if (!seenIds.has(req.id)) {
                     seenIds.add(req.id);
@@ -191,6 +214,7 @@ export const HomeScreen = ({ navigation }: Props) => {
                 }
             });
 
+            // 2. Ajouter les événements de la table events
             eventsData.forEach((evt) => {
                 if (!seenIds.has(evt.id)) {
                     seenIds.add(evt.id);
@@ -198,15 +222,18 @@ export const HomeScreen = ({ navigation }: Props) => {
                 }
             });
 
-            // 🎯 TRI AVEC GESTION SECURISEE DU GROUPE SANGUIN OPTIONNEL
             const userBloodGroup = donorData.bloodGroup ?? '';
 
+            // 🎯 TRI : Demandes urgentes en priorité absolue
             const sortedItems = combinedList.sort((a, b) => {
-                if (a.isUrgentRequest && !b.isUrgentRequest) return -1;
-                if (!a.isUrgentRequest && b.isUrgentRequest) return 1;
+                const aIsUrgent = a.isUrgentRequest || a.title.toLowerCase().includes('urgence');
+                const bIsUrgent = b.isUrgentRequest || b.title.toLowerCase().includes('urgence');
 
-                const aMatches = userBloodGroup ? (a.targetGroups.includes(userBloodGroup) ? 1 : 0) : 0;
-                const bMatches = userBloodGroup ? (b.targetGroups.includes(userBloodGroup) ? 1 : 0) : 0;
+                if (aIsUrgent && !bIsUrgent) return -1;
+                if (!aIsUrgent && bIsUrgent) return 1;
+
+                const aMatches = isBloodCompatible(userBloodGroup, a.targetGroups) ? 1 : 0;
+                const bMatches = isBloodCompatible(userBloodGroup, b.targetGroups) ? 1 : 0;
 
                 if (bMatches !== aMatches) return bMatches - aMatches;
                 return (a.distanceKm || 0) - (b.distanceKm || 0);
@@ -219,7 +246,7 @@ export const HomeScreen = ({ navigation }: Props) => {
                 Alert.alert('Session expirée', 'Votre session a expiré, veuillez vous reconnecter.');
                 navigation.replace('Auth');
             } else {
-                Alert.alert('Erreur', 'Impossible de charger les événements.');
+                Alert.alert('Erreur', 'Impossible de charger les données.');
             }
         } finally {
             setLoading(false);
@@ -227,30 +254,36 @@ export const HomeScreen = ({ navigation }: Props) => {
         }
     }, [navigation]);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [loadData])
+    );
 
     const handleRefresh = () => {
         setRefreshing(true);
         loadData();
     };
 
-    // 🎯 FILTRAGE SECURISE CONTRE UN BLOODGROUP UNDEFINED
+    // 🎯 FILTRE DE SÉLECTION STRICT
     const getFilteredEvents = () => {
         const userRadiusKm = profile?.maxRadiusKm || 20;
-        const userBloodGroup = profile?.bloodGroup;
 
         return allItems.filter((item) => {
+            const isUrgentItem =
+                item.isUrgentRequest === true ||
+                item.title.toLowerCase().includes('urgence') ||
+                item.conditions.toLowerCase().includes('urgent');
+
             if (activeCategory === 'URGENT') {
-                const matchesBloodGroup = userBloodGroup ? item.targetGroups.includes(userBloodGroup) : false;
-                return item.isUrgentRequest || matchesBloodGroup;
+                return isUrgentItem;
             }
             if (activeCategory === 'NEARBY') {
                 return (item.distanceKm || 0) <= userRadiusKm;
             }
             if (activeCategory === 'MOBILE') {
-                return item.title.toLowerCase().includes('mobile') || item.address.toLowerCase().includes('bus');
+                const fullText = `${item.title} ${item.placeName} ${item.address}`.toLowerCase();
+                return fullText.includes('mobile') || fullText.includes('bus') || fullText.includes('متنقل');
             }
             return true;
         });
@@ -258,6 +291,14 @@ export const HomeScreen = ({ navigation }: Props) => {
 
     const handleConfirmAction = async () => {
         if (!selectedItem || !token) return;
+
+        if (!isBloodCompatible(profile?.bloodGroup, selectedItem.targetGroups)) {
+            Alert.alert(
+                'Action impossible ❌',
+                `Votre groupe sanguin (${profile?.bloodGroup || 'Inconnu'}) n'est pas compatible avec cette demande.`
+            );
+            return;
+        }
 
         try {
             setRegistering(true);
@@ -293,28 +334,29 @@ export const HomeScreen = ({ navigation }: Props) => {
 
     const renderEventCard = ({ item }: { item: UnifiedHomeItem }) => {
         const userBloodGroup = profile?.bloodGroup;
-        const isTargeted = userBloodGroup ? item.targetGroups.includes(userBloodGroup) : false;
+        const canDonate = isBloodCompatible(userBloodGroup, item.targetGroups);
+        const isUrgentItem = item.isUrgentRequest || item.title.toLowerCase().includes('urgence');
 
         return (
             <View
                 style={[
                     styles.card,
-                    item.isUrgentRequest ? styles.cardUrgentHospital : (isTargeted ? styles.cardHighlighted : null),
+                    isUrgentItem ? styles.cardUrgentHospital : null,
+                    !canDonate && styles.cardIncompatible,
                 ]}
             >
-                {item.isUrgentRequest ? (
+                {isUrgentItem ? (
                     <View style={styles.hospitalUrgentBadge}>
-                        <Text style={styles.hospitalUrgentText}>🚨 HÔPITAL EN BESOIN URGENT ({item.targetGroups.join(', ')})</Text>
-                    </View>
-                ) : isTargeted ? (
-                    <View style={styles.priorityBadge}>
-                        <Text style={styles.priorityBadgeText}>🚨 Urgent ({userBloodGroup})</Text>
+                        <Text style={styles.hospitalUrgentText}>
+                            🚨 DEMANDE URGENT HOSPITALIÈRE ({item.targetGroups.join(', ')})
+                        </Text>
                     </View>
                 ) : null}
 
                 <Text style={styles.eventTitle}>{item.title}</Text>
                 <Text style={styles.eventDetail}>📍 {item.placeName} ({item.distanceKm ? `${item.distanceKm} km` : item.address})</Text>
                 <Text style={styles.eventDetail}>📅 Date : {item.eventDate}</Text>
+                <Text style={styles.eventDetail}>🩸 Groupes recherchés : {item.targetGroups.join(', ')}</Text>
 
                 {!item.isUrgentRequest && (
                     <View style={styles.gaugeContainer}>
@@ -333,14 +375,29 @@ export const HomeScreen = ({ navigation }: Props) => {
                 )}
 
                 <TouchableOpacity
-                    style={[styles.registerButton, item.isUrgentRequest && styles.hospitalUrgentButton]}
+                    style={[
+                        styles.registerButton,
+                        isUrgentItem && styles.hospitalUrgentButton,
+                        !canDonate && styles.disabledButton,
+                    ]}
                     onPress={() => {
+                        if (!canDonate) {
+                            Alert.alert(
+                                'Groupe sanguin non compatible ❌',
+                                `Votre groupe sanguin (${userBloodGroup || 'Non spécifié'}) ne peut pas donner pour cette demande qui recherche : ${item.targetGroups.join(', ')}.`
+                            );
+                            return;
+                        }
                         setSelectedItem(item);
                         if (item.slots.length > 0) setSelectedSlot(item.slots[0].time);
                     }}
                 >
-                    <Text style={styles.registerButtonText}>
-                        {item.isUrgentRequest ? 'Je viens immédiatement 🏃‍♂️🩸' : 'S\'inscrire à cette collecte 🩸'}
+                    <Text style={[styles.registerButtonText, !canDonate && styles.disabledButtonText]}>
+                        {!canDonate
+                            ? `❌ Non compatible (${userBloodGroup || 'Inconnu'})`
+                            : isUrgentItem
+                                ? 'Je viens immédiatement 🏃‍♂️🩸'
+                                : 'S\'inscrire à cette collecte 🩸'}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -356,11 +413,13 @@ export const HomeScreen = ({ navigation }: Props) => {
     }
 
     const filteredData = getFilteredEvents();
+    const urgentCount = allItems.filter(
+        i => i.isUrgentRequest || i.title.toLowerCase().includes('urgence')
+    ).length;
     const userRadiusKm = profile?.maxRadiusKm || 20;
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* EN-TÊTE CHARLES NICOLLE */}
             <View style={headerStyles.headerBanner}>
                 <View style={headerStyles.topRow}>
                     <View style={headerStyles.brandContainer}>
@@ -397,7 +456,6 @@ export const HomeScreen = ({ navigation }: Props) => {
                 <AnimatedHeartbeat />
             </View>
 
-            {/* FILTRES DE CATÉGORIES */}
             <View style={styles.categoriesSection}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
                     <TouchableOpacity
@@ -413,8 +471,8 @@ export const HomeScreen = ({ navigation }: Props) => {
                         style={[styles.categoryChip, activeCategory === 'URGENT' && styles.categoryChipActive]}
                         onPress={() => setActiveCategory('URGENT')}
                     >
-                        <Text style={[styles.categoryChipText, activeCategory === 'URGENT' && styles.categoryChipTextActive]}>
-                            🚨 Besoin urgent
+                        <Text style={[styles.categoryChipText, activeCategory === 'URGENT' && styles.categoryChipActive]}>
+                            🚨 Besoin urgent ({urgentCount})
                         </Text>
                     </TouchableOpacity>
 
@@ -438,7 +496,6 @@ export const HomeScreen = ({ navigation }: Props) => {
                 </ScrollView>
             </View>
 
-            {/* LISTE DES COLLECTES ET URGENCES */}
             <FlatList
                 data={filteredData}
                 keyExtractor={(item) => item.id}
@@ -450,12 +507,11 @@ export const HomeScreen = ({ navigation }: Props) => {
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>Aucune collecte ou alerte ne correspond à ce filtre.</Text>
+                        <Text style={styles.emptyText}>Aucune demande ou collecte ne correspond à ce filtre.</Text>
                     </View>
                 }
             />
 
-            {/* MODAL D'ACTION */}
             <Modal visible={!!selectedItem} animationType="slide" transparent onRequestClose={() => setSelectedItem(null)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -463,7 +519,7 @@ export const HomeScreen = ({ navigation }: Props) => {
 
                         {selectedItem?.isUrgentRequest ? (
                             <Text style={styles.modalSubTitle}>
-                                Alerte prioritaire émise par {selectedItem?.placeName}. Confirmez-vous votre arrivée ?
+                                Demande prioritaire émise par {selectedItem?.placeName}. Confirmez-vous votre présence immédiate ?
                             </Text>
                         ) : (
                             <>
@@ -518,7 +574,6 @@ export const HomeScreen = ({ navigation }: Props) => {
                 </View>
             </Modal>
 
-            {/* BARRE DE NAVIGATION INFÉRIEURE */}
             <View style={styles.bottomTabBar}>
                 <TouchableOpacity style={styles.navItem} onPress={() => { }}>
                     <Text style={[styles.navIcon, styles.navIconActive]}>🏠</Text>
@@ -540,11 +595,22 @@ export const HomeScreen = ({ navigation }: Props) => {
                     <Text style={styles.navLabel}>Profil</Text>
                 </TouchableOpacity>
             </View>
+            {/* BOUTON ASSISTANT FLOTTANT */}
+            <TouchableOpacity
+                style={styles.fabAssistant}
+                onPress={() => navigation.navigate('Assistant' as any)}
+            >
+                <Text style={styles.fabIcon}>💬</Text>
+            </TouchableOpacity>
+
+            <View style={styles.bottomTabBar}>
+                {/* ... vos boutons de navigation existants ... */}
+            </View> {/* AJOUTEZ CETTE BALISE FERMANTE ICI */}
+
         </SafeAreaView>
     );
 };
-
-// --- STYLES ECG ---
+// --- STYLES ---
 const heartbeatStyles = StyleSheet.create({
     container: {
         height: ECG_HEIGHT,
@@ -567,7 +633,6 @@ const heartbeatStyles = StyleSheet.create({
     },
 });
 
-// --- STYLES BANNIÈRE CHARLES NICOLLE ---
 const headerStyles = StyleSheet.create({
     headerBanner: {
         backgroundColor: '#901818',
@@ -663,7 +728,6 @@ const headerStyles = StyleSheet.create({
     bloodBadgeText: { color: '#901818', fontWeight: '900', fontSize: 16 },
 });
 
-// --- STYLES HOME ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -694,19 +758,8 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 3,
     },
-    cardHighlighted: { borderWidth: 2, borderColor: '#901818', backgroundColor: '#FFF' },
     cardUrgentHospital: { borderWidth: 2, borderColor: '#DC2626', backgroundColor: '#FEF2F2' },
-    priorityBadge: {
-        backgroundColor: '#FEF2F2',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#FCA5A5',
-    },
-    priorityBadgeText: { color: '#901818', fontSize: 12, fontWeight: 'bold' },
+    cardIncompatible: { opacity: 0.85, backgroundColor: '#F8FAFC' },
     hospitalUrgentBadge: {
         backgroundColor: '#DC2626',
         paddingHorizontal: 10,
@@ -746,7 +799,14 @@ const styles = StyleSheet.create({
     hospitalUrgentButton: {
         backgroundColor: '#DC2626',
     },
+    disabledButton: {
+        backgroundColor: '#94A3B8',
+        borderColor: '#CBD5E1',
+        shadowOpacity: 0,
+        elevation: 0,
+    },
     registerButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
+    disabledButtonText: { color: '#FFFFFF' },
     emptyContainer: { alignItems: 'center', marginTop: 40 },
     emptyText: { textAlign: 'center', color: '#94A3B8', fontSize: 14 },
 
@@ -801,4 +861,25 @@ const styles = StyleSheet.create({
     navIconActive: { opacity: 1 },
     navLabel: { fontSize: 11, color: '#64748B', marginTop: 3 },
     navLabelActive: { color: '#901818', fontWeight: 'bold' },
+    // --- Styles du bouton assistant ---
+    fabAssistant: {
+        position: 'absolute',
+        bottom: 90, // Juste au-dessus de la bottomTabBar
+        right: 20,
+        backgroundColor: '#901818',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 6,
+        zIndex: 10,
+    },
+    fabIcon: {
+        fontSize: 28,
+    },
 });

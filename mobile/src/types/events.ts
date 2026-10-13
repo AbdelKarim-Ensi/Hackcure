@@ -7,6 +7,7 @@ export interface NotifPrefs {
 }
 
 export interface DonorProfile {
+    position: any;
     id?: string;
     fullName: string;
     phone: string;
